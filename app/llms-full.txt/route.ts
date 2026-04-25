@@ -25,7 +25,10 @@ const PAGES = [
   ['API: /queue', 'api/queue.mdx'],
   ['API: /me', 'api/me.mdx'],
   ['API: /billing', 'api/billing.mdx'],
-  ['API: /webhooks', 'api/webhooks.mdx']
+  ['API: /webhooks', 'api/webhooks.mdx'],
+  ['Инструменты: CLI', 'cli.mdx'],
+  ['Инструменты: Skill для AI', 'skill.mdx'],
+  ['Инструменты: MCP-сервер', 'mcp.mdx']
 ] as const
 
 export async function GET() {

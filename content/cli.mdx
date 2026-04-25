@@ -1,0 +1,185 @@
+---
+title: CLI
+description: Командная строка `na` — генерация, баланс, расходы, активность из терминала или из агента
+---
+
+import { Tabs, Callout } from 'nextra/components'
+
+# CLI — `na`
+
+Официальная утилита `@neuroartist/cli` — командная строка для всех ручек НейроХудожник API. Подходит для скриптов в CI, для интерактивной работы в терминале и для оркестрации из AI-агентов: каждая команда умеет отдавать стабильный JSON-конверт с гарантией обратной совместимости.
+
+## Установка
+
+<Tabs items={['npm (Node 20+)', 'Standalone (без Node)', 'pnpm dlx (разовый запуск)']}>
+  <Tabs.Tab>
+
+```bash
+npm install -g @neuroartist/cli
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CroissanStudioDev/neuroartist-api-cli/main/install.sh | sh
+```
+
+Скачивает бинарник под вашу платформу (Linux/macOS/Windows × x64/arm64) в `~/.local/bin`. Node не нужен.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+pnpm dlx @neuroartist/cli@latest <command>
+```
+
+Удобно если нужен одноразовый запуск.
+
+  </Tabs.Tab>
+</Tabs>
+
+После установки бинарник называется **`na`**:
+
+```bash
+na --version
+# → @neuroartist/cli 0.2.0
+```
+
+## Аутентификация
+
+```bash
+na auth login
+```
+
+CLI запросит API-ключ интерактивно, сохранит в `~/.config/neuroartist/config.json` и проверит через `/me`. Альтернативно ключ можно передать через окружение:
+
+```bash
+export NEUROARTIST_API_KEY=na_live_xxxxxxxxxxxxxxxx
+```
+
+Проверить статус:
+
+```bash
+na auth status     # текущий профиль и base URL
+na auth whoami     # короткое user-id + роль
+```
+
+Поддерживаются именованные профили (`--profile production`, `--profile staging`) — каждый со своим ключом.
+
+## Команды
+
+| Команда | Что делает |
+| --- | --- |
+| `na auth` | Логин, выход, текущий пользователь, статус |
+| `na models list` | Каталог моделей с фильтрами (`--category`, `--lab`, `--search`) |
+| `na models get <id>` | Карточка модели |
+| `na models schema <id>` | JSON Schema input-а — точные параметры модели |
+| `na models estimate <id> -i …` | Оценка стоимости запроса до его отправки |
+| `na run <model> -i …` | Синхронная генерация (изображения, короткие задачи) |
+| `na queue submit <model> -i …` | Async-постановка в очередь |
+| `na queue status <id>` | Статус задачи в очереди |
+| `na queue stream <id>` | SSE-прогресс (NDJSON-строки в `--json`-режиме) |
+| `na queue result <id>` | Финальный результат |
+| `na queue cancel <id>` | Отмена с возвратом средств |
+| `na balance` | Текущий баланс |
+| `na usage [summary\|by-model\|by-key]` | Расходы за окна 5h / 24h / 7d / 30d |
+| `na activity` | Последние генерации |
+| `na doctor` | Самодиагностика — конфиг, доступность API, `/me` |
+| `na update` | Самообновление standalone-бинарника |
+| `na completion <bash\|zsh\|fish>` | Авто-дополнение для shell-а |
+| `na commands --json` | Машинно-читаемое дерево всех команд (для агентов) |
+
+## Глобальные флаги
+
+| Флаг | Что |
+| --- | --- |
+| `--profile <name>` | Использовать другой профиль из конфига |
+| `--base-url <url>` | Подменить URL API (для staging / локалки) |
+| `--json` | Вывод в стабильном JSON-конверте |
+| `-q, --quiet` | Скрыть прогресс в stderr |
+| `-y, --yes` | Не задавать подтверждений (для CI и агентов) |
+| `--debug` | Печатать HTTP-трафик в stderr |
+| `-i, --input KEY=VALUE` | Параметр модели; повторяется. Авто-определение типа (string / number / boolean / file / JSON) |
+| `--input-file path.json` | Body запроса из JSON-файла |
+| `-o, --output-dir <dir>` | Куда скачать сгенерированные ассеты |
+
+## Минимальный пример
+
+Сгенерировать одну картинку и скачать в `./out`:
+
+```bash
+na run flux/dev \
+  -i prompt="editorial portrait, monochrome" \
+  -i image_size=portrait_4_3 \
+  -o ./out
+```
+
+Async-генерация видео с прогрессом:
+
+```bash
+REQ=$(na queue submit kling-video/v2/standard/text-to-video \
+  -i prompt="snowy forest, dawn" -i duration=5 --json | jq -r .data.requestId)
+
+na queue stream "$REQ" --json    # NDJSON-стрим прогресса
+na queue result "$REQ" -o ./out  # финальный результат + скачивание
+```
+
+## JSON-конверт для агентов
+
+В режиме `--json` (или когда stdout это пайп / `CI=true`) каждая команда отвечает одним и тем же конвертом:
+
+```json
+{
+  "ok": true,
+  "schemaVersion": 1,
+  "command": "models.estimate",
+  "data": {
+    "modelId": "flux/dev",
+    "estimatedCostRub": 8,
+    "estimatedPriceRub": 8.0,
+    "priceUnit": "image",
+    "quantity": 1
+  },
+  "next_actions": ["run flux/dev …"],
+  "warnings": []
+}
+```
+
+При ошибке:
+
+```json
+{
+  "ok": false,
+  "schemaVersion": 1,
+  "command": "run.flux/dev",
+  "error": {
+    "code": "insufficient_balance",
+    "message": "Не хватает средств на балансе",
+    "retryable": false,
+    "required": 12,
+    "available": 5
+  }
+}
+```
+
+`schemaVersion: 1` гарантирован к обратной совместимости.
+
+## Коды выхода
+
+| Exit code | Когда |
+| --- | --- |
+| `0` | Успех |
+| `1` | Generic ошибка |
+| `2` | Неверное использование (4xx kроме 401/403/409/429) |
+| `3` | Auth (401, 403, нет API-ключа) |
+| `4` | Retryable (429, 5xx) — можно повторить с backoff |
+| `5` | Conflict (409) |
+
+`stdout` всегда machine-readable (data), `stderr` — логи и прогресс.
+
+## Дальше
+
+- [Skill](/skill) — готовый рецепт для AI-агента, оборачивающего этот CLI.
+- [MCP-сервер](/mcp) — альтернативный способ подключить документацию в IDE-ассистент.
+- [Каталог моделей](/generate) — список модели и их параметры.

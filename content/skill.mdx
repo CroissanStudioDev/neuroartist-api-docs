@@ -1,0 +1,126 @@
+---
+title: Skill для AI-агентов
+description: Skill `neuroartist-media` — ставится в Cursor / Claude Code / Codex, учит агента генерировать медиа через CLI
+---
+
+import { Tabs, Callout } from 'nextra/components'
+
+# Skill `neuroartist-media`
+
+Готовый Agent Skill для подключения генерации изображений и видео в рабочий процесс AI-агента. Это не виджет и не chatbot — а **инструкция в формате SKILL.md**, которую агент читает и применяет, когда вы просите его сгенерировать медиа.
+
+Skill оборачивает [CLI `na`](/cli): агент сам подбирает модель, читает её JSON Schema, считает стоимость, отправляет запрос (sync или async — в зависимости от типа), скачивает результат и возвращает локальный путь. Без копирования вручную.
+
+## Что внутри
+
+```
+neuroartist-media/
+├── SKILL.md              ← инструкция для агента
+└── references/
+    ├── prompting.md      ← паттерны промптов для image/video
+    ├── model-selection.md ← логика выбора модели и расчёт цены
+    ├── workflows.md      ← пошаговые рецепты
+    ├── examples.md       ← готовые команды (product image, cinematic video, …)
+    └── install.md        ← инструкция по установке и проверке
+```
+
+## Совместимость
+
+Skill — переносимый: одна и та же папка работает в любом клиенте, который читает формат SKILL.md.
+
+| Клиент | Путь установки |
+| --- | --- |
+| **Claude Code** (CLI) | `~/.claude/skills/neuroartist-media/` |
+| **Cursor** | `~/.cursor/skills/neuroartist-media/` |
+| **Codex CLI** | `~/.codex/skills/neuroartist-media/` |
+| **OpenCode** | `~/.config/opencode/skills/neuroartist-media/` |
+| **Project-local** (любой клиент) | `./skills/neuroartist-media/` |
+
+## Установка
+
+<Tabs items={['Claude Code', 'Cursor', 'Project-local']}>
+  <Tabs.Tab>
+
+```bash
+# 1. Поставить CLI (skill вызывает его)
+npm install -g @neuroartist/cli
+na auth login
+
+# 2. Положить skill в ~/.claude/skills/
+mkdir -p ~/.claude/skills
+git clone https://github.com/neuroartist/skill-neuroartist-media \
+  ~/.claude/skills/neuroartist-media
+```
+
+После рестарта Claude Code skill подхватится автоматически.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+npm install -g @neuroartist/cli
+na auth login
+
+mkdir -p ~/.cursor/skills
+git clone https://github.com/neuroartist/skill-neuroartist-media \
+  ~/.cursor/skills/neuroartist-media
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+npm install -g @neuroartist/cli
+na auth login
+
+mkdir -p ./skills
+git clone https://github.com/neuroartist/skill-neuroartist-media \
+  ./skills/neuroartist-media
+```
+
+Подходит, когда хотите версионировать skill вместе с проектом.
+
+  </Tabs.Tab>
+</Tabs>
+
+<Callout type="info">
+  Имя директории должно совпадать с `name:` из frontmatter SKILL.md — `neuroartist-media`. Иначе клиент skill не подхватит.
+</Callout>
+
+## Как это работает
+
+Когда вы просите агента «сгенерируй обложку для подкаста» или «оживи этот кадр в 5-секундное видео», skill ведёт его по фиксированному воркфлоу:
+
+1. **Подготовка.** Агент проверяет CLI (`na doctor`), статус ключа (`na auth status`) и список доступных команд (`na commands --json`).
+2. **Выбор модели.** Поиск по каталогу: `na models list --search <тема> --json`. Агент сравнивает кандидатов по цене и тэгам.
+3. **Чтение схемы.** Перед сборкой input-а читает `na models schema <id> --json` — никакого «угадывания» имён параметров.
+4. **Оценка стоимости** для дорогих задач (видео, batched image): `na models estimate <id> -i … --json`. Если стоит больше порога — спрашивает у пользователя.
+5. **Запуск.**
+   - **`na run`** для коротких синхронных задач (image, fast TTS).
+   - **`na queue submit/stream/result`** для видео и длинных пайплайнов с прогрессом.
+6. **Возврат результата.** Агент отдаёт: modelId, requestId (если async), статус, локальный путь к файлу, публичный URL, реальную стоимость, seed/метаданные и команду для воспроизведения.
+
+## Принципы skill
+
+- **Никогда не выдумывает имена параметров** — только то, что в `schema`.
+- **Передаёт `--json` всегда** — стабильный envelope.
+- **Не повторяет `queue submit` слепо** — это не идемпотентная операция; при таймауте использует уже выданный `requestId`.
+- **Stdout — данные, stderr — логи.** Skill не путает их между собой.
+- **Обработка ошибок:**
+  - exit 3 / `no_api_key` → попросить `na auth login`.
+  - exit 4 / `retryable: true` → повторить с экспоненциальным backoff.
+  - `insufficient_balance` → показать сумму, попросить пополнение.
+  - 4xx schema-error → перечитать `schema` и пересобрать input.
+
+## Требования
+
+- Node.js ≥ 20 (для CLI).
+- `@neuroartist/cli` глобально или доступен в `$PATH`.
+- API-ключ настроен (`na auth login` или `NEUROARTIST_API_KEY`).
+- Сетевой доступ к `api.neuroartist.ru`.
+
+## Дальше
+
+- [CLI `na`](/cli) — что именно skill вызывает под капотом.
+- [Каталог моделей](/generate) — что доступно для генерации.
+- [MCP-сервер](/mcp) — если нужен доступ к **документации** (а не к самой генерации) из IDE-ассистента.

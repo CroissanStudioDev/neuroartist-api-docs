@@ -11,6 +11,8 @@ export default {
   errors: 'Коды ошибок',
   'rate-limits': 'Лимиты запросов',
   api: 'API Reference',
-  '-- agents': { type: 'separator', title: 'Для AI-агентов' },
+  '-- tools': { type: 'separator', title: 'Инструменты' },
+  cli: 'CLI — `na`',
+  skill: 'Skill для AI',
   mcp: 'MCP-сервер'
 }
