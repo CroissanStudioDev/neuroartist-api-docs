@@ -2,8 +2,10 @@ export default {
   index: 'Введение',
   quickstart: 'Быстрый старт',
   authentication: 'Аутентификация',
-  generate: 'Генерация',
-  build: 'Интеграция',
+  generate: 'Модели',
+  build: 'Запросы',
   billing: 'Биллинг',
+  errors: 'Коды ошибок',
+  'rate-limits': 'Лимиты запросов',
   api: 'API Reference'
 }

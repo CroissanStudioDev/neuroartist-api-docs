@@ -10,25 +10,20 @@ const PAGES = [
   ['Изображения', 'generate/images.mdx'],
   ['Видео', 'generate/video.mdx'],
   ['Аудио', 'generate/audio.mdx'],
-  ['Каталог моделей', 'generate/models.mdx'],
   ['Синхронные запросы /run', 'build/sync.mdx'],
   ['Асинхронная очередь /queue', 'build/async.mdx'],
   ['Webhooks', 'build/webhooks.mdx'],
   ['Загрузка файлов', 'build/upload-inputs.mdx'],
   ['Биллинг', 'billing/index.mdx'],
-  ['Авто-пополнение', 'billing/auto-topup.mdx'],
+  ['Коды ошибок', 'errors.mdx'],
+  ['Лимиты запросов', 'rate-limits.mdx'],
   ['API: обзор', 'api/index.mdx'],
   ['API: /api/auth', 'api/authentication.mdx'],
   ['API: /run', 'api/run.mdx'],
   ['API: /queue', 'api/queue.mdx'],
   ['API: /me', 'api/me.mdx'],
   ['API: /billing', 'api/billing.mdx'],
-  ['API: /webhooks', 'api/webhooks.mdx'],
-  ['API: /v1', 'api/v1.mdx'],
-  ['API: health и метрики', 'api/health.mdx'],
-  ['API: коды ошибок', 'api/errors.mdx'],
-  ['API: лимиты запросов', 'api/rate-limits.mdx'],
-  ['API: хранение результатов', 'api/asset-hosting.mdx']
+  ['API: /webhooks', 'api/webhooks.mdx']
 ] as const
 
 export async function GET() {

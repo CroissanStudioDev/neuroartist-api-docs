@@ -14,7 +14,7 @@ const PAGES = [
   ['Асинхронная очередь и SSE', 'build/async.mdx'],
   ['Webhooks', 'build/webhooks.mdx'],
   ['Биллинг', 'billing/index.mdx'],
-  ['Коды ошибок', 'api/errors.mdx']
+  ['Коды ошибок', 'errors.mdx']
 ] as const
 
 export async function GET() {
