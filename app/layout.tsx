@@ -1,10 +1,32 @@
+import type { Metadata, Viewport } from 'next'
+import { Geist_Mono, Golos_Text } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { Footer, Layout, Navbar } from 'nextra-theme-docs'
-import { Head } from 'nextra/components'
+import { Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
+import './globals.css'
 
-export const metadata = {
+// Brand typeface — source of truth: gateway.neuroartist.ru.
+const golosText = Golos_Text({
+  variable: '--font-golos-text',
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap'
+})
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+  display: 'swap'
+})
+
+export const viewport: Viewport = {
+  themeColor: '#6FA31B',
+  colorScheme: 'light'
+}
+
+export const metadata: Metadata = {
   title: {
     default: 'Neuroartist API Gateway — Документация',
     template: '%s — Neuroartist API Gateway'
@@ -16,8 +38,8 @@ export const metadata = {
 const navbar = (
   <Navbar
     logo={
-      <span className="font-semibold">
-        Neuroartist <span className="opacity-60">API Gateway</span>
+      <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
+        Neuroartist <span style={{ opacity: 0.55 }}>API Gateway</span>
       </span>
     }
     projectLink="https://github.com/neuroartist/neuroartist-api-gateway"
@@ -28,7 +50,12 @@ const footer = <Footer>{new Date().getFullYear()} © Neuroartist.</Footer>
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ru" dir="ltr" suppressHydrationWarning>
+    <html
+      className={`${golosText.variable} ${geistMono.variable}`}
+      lang="ru"
+      dir="ltr"
+      suppressHydrationWarning
+    >
       <Head />
       <body>
         <Layout
@@ -36,8 +63,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/neuroartist/docs/tree/main"
           footer={footer}
+          darkMode={false}
+          nextThemes={{ forcedTheme: 'light', defaultTheme: 'light' }}
           sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true, toggleButton: true }}
-          toc={{ backToTop: 'Наверх' }}
+          toc={{ backToTop: 'Наверх', title: 'Содержание' }}
+          search={
+            <Search
+              placeholder="Поиск по документации…"
+              emptyResult="Ничего не найдено."
+              loading="Загрузка…"
+              errorText="Ошибка поиска."
+            />
+          }
+          editLink="Править эту страницу на GitHub"
+          feedback={{ content: 'Нашли ошибку? Сообщите →', labels: 'feedback' }}
         >
           {children}
         </Layout>
