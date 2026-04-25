@@ -64,6 +64,16 @@ html.dark .nextra-card > p {
   font-size: 0.85em !important;
 }
 
+/* Заголовки секций sidebar (separator type) — дефолт mb-2 + py-1.5
+   создаёт ~14px между заголовком и первым дочерним пунктом, что
+   визуально слишком далеко. Сжимаем до ~4px. */
+aside li[class*="font-semibold"][class*="mt-5"],
+aside li[class*="font-semibold"]:first-child {
+  margin-bottom: 0 !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.125rem !important;
+}
+
 /* Хлебные крошки чуть крупнее и контрастнее, особенно в dark — дефолт
    text-gray-400 / text-sm на тёмном плохо читается. */
 .nextra-breadcrumb {
