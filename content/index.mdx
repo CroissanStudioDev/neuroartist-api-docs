@@ -5,27 +5,7 @@ description: REST API для генерации изображений, виде
 
 # НейроХудожник API
 
-REST API для генерации **изображений, видео и аудио** в вашем приложении. 1300+ моделей: FLUX, Stable Diffusion, Kling, Runway, ElevenLabs, Whisper. Оплата в рублях через YooKassa, без VPN, welcome-бонус 50 ₽ при регистрации.
-
-## Минимальный пример
-
-```bash
-curl -X POST https://api.neuroartist.ru/run/flux/dev \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"editorial portrait, monochrome"}'
-```
-
-```json
-{
-  "images": [
-    { "url": "https://s3.cloud.ru/.../result.webp", "width": 768, "height": 1024 }
-  ],
-  "seed": 12345
-}
-```
-
-URL ведёт в наш S3 — ссылка не протухает, скачивайте напрямую в свой проект.
+REST API для генерации изображений, видео и аудио. 1300+ моделей — FLUX, Stable Diffusion, Kling, Runway, ElevenLabs, Whisper. Оплата в рублях, без VPN.
 
 ## Что дальше
 
