@@ -42,7 +42,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app
 }
 ```
 
-`status` ∈ {`IN_QUEUE`, `IN_PROGRESS`} — провайдер уже начал, или ещё в очереди.
+`status` ∈ {`IN_QUEUE`, `IN_PROGRESS`} — задача в работе или ещё ждёт слот.
 
 **Ошибки:** см. `/run` — те же.
 
@@ -50,7 +50,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app
 
 Опрос статуса (без полного payload).
 
-**Параметры query:** `logs=1` (опционально) — добавить логи провайдера.
+**Параметры query:** `logs=1` (опционально) — добавить логи генерации.
 
 **Ответ 200:**
 
@@ -69,7 +69,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app
 
 ## `GET /queue/{modelId}/requests/{requestId}/status/stream`
 
-SSE с raw-статусом провайдера.
+SSE с raw-статусом генерации.
 
 ```
 data: {"status":"IN_PROGRESS","logs":[…]}
@@ -109,7 +109,7 @@ Late-join — поддерживается. Подключение после te
 
 Забрать результат (после `COMPLETED`).
 
-**Параметры query:** `passthrough=1` — оригинальные URL-ы провайдера без re-host в S3.
+**Параметры query:** `passthrough=1` — оригинальные внутренние URL без re-host в наш S3.
 
 **Ответ 200:**
 

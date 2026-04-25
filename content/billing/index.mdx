@@ -15,8 +15,8 @@ top-up   →  balance  →  deduct (submit)  →  refund (если упало)
                         reconcile (по фактическому usage)
 ```
 
-- **Списание** атомарно при `POST /run` или `POST /queue/{modelId}` — `creditCost` модели (integer, ≥ 1 ₽). Не хватает — `402 insufficient_balance`, **запрос провайдеру не уходит**.
-- **Возврат** — автоматически при upstream-ошибке.
+- **Списание** атомарно при `POST /run` или `POST /queue/{modelId}` — `creditCost` модели (integer, ≥ 1 ₽). Не хватает — `402 insufficient_balance`, **генерация не запускается**.
+- **Возврат** — автоматически при ошибке генерации.
 - **Reconciliation** — для моделей с динамической ценой (per-second video, per-megapixel image) реальное списание уточняется после генерации.
 
 Все движения видны в `GET /me/transactions`. Тип каждой записи — один из `topup`, `deduct`, `refund`, `grant`.

@@ -24,7 +24,7 @@ curl https://api.neuroartist.ru/models/flux/dev
   "originalPriceRub": 8.0,
   "priceRub": 8.0,
   "priceUnit": "image",
-  "modelLab": "Black Forest Labs",
+  "modelLab": "Some Lab",
   "modelFamily": "FLUX",
   "groupLabel": "FLUX.1",
   "tags": ["realism", "fast"],
@@ -48,8 +48,8 @@ curl https://api.neuroartist.ru/models/flux/dev
 | `modelId` | Публичный alias. Используется в `POST /run/{modelId}` и `POST /queue/{modelId}`. Не меняется. |
 | `displayName` | Человекочитаемое имя для UI. |
 | `category` | Тип задачи — `text-to-image`, `image-to-image`, `text-to-video`, `image-to-video`, `text-to-speech`, `speech-to-text`, `text-to-audio`, … |
-| `modelLab` | Производитель: `Black Forest Labs`, `Google`, `Kling`, `ElevenLabs`. `null` для community-моделей. |
-| `modelFamily` | Семейство (`FLUX`, `Stable Diffusion`, `Kling Video`). |
+| `modelLab` | Лаборатория-автор модели. Может быть `null`. |
+| `modelFamily` | Семейство модели (например `FLUX`, `Stable Diffusion`). |
 | `groupLabel` | Label для группировки в каталоге UI. |
 | `tags` | Массив строк: `realism`, `lora`, `multilingual`, `nsfw-safe`, … Используются для поиска. |
 
@@ -121,7 +121,7 @@ curl https://api.neuroartist.ru/models/flux/dev
 
 Поле `schemaRu` — RU-overlay поверх английских `title` и `description` для UI playground в дашборде. Структура та же.
 
-`schemaFetchedAt` — когда мы последний раз тянули schema у провайдера. Если `null` — schema подгружается лениво при первом обращении к `GET /models/{modelId}`.
+`schemaFetchedAt` — когда схема была последний раз обновлена. Если `null` — schema подгружается лениво при первом обращении к `GET /models/{modelId}`.
 
 ### Метаданные
 
@@ -130,7 +130,7 @@ curl https://api.neuroartist.ru/models/flux/dev
 | `description` | Краткое описание (1–2 предложения) — что умеет, на чём натренирована. |
 | `thumbnailUrl` | URL preview-картинки для UI. |
 | `licenseType` | Лицензия модели: `commercial`, `non-commercial`, `open-source`. Влияет на разрешённые use-cases. |
-| `publishedAt` | Когда модель опубликована провайдером. |
+| `publishedAt` | Когда модель добавлена в каталог. |
 | `createdAt`, `updatedAt` | Когда добавлена / обновлена в нашем каталоге. |
 
 ## Использовать schema программно

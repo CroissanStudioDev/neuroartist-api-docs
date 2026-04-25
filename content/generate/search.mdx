@@ -26,7 +26,7 @@ curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=popular&limi
       "modelId": "flux/dev",
       "displayName": "FLUX.1 [dev]",
       "category": "text-to-image",
-      "modelLab": "Black Forest Labs",
+      "modelLab": "Some Lab",
       "tags": ["realism", "fast"],
       "priceRub": 8.0,
       "priceUnit": "image",
@@ -47,7 +47,7 @@ curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=popular&limi
 | Параметр | Тип | Описание |
 | --- | --- | --- |
 | `category` | string (CSV) | Одна или несколько категорий через запятую: `text-to-image,image-to-image`. SQL `IN (...)`. |
-| `lab` | string (CSV) | Производитель: `Google,Black Forest Labs,Kling,ElevenLabs`. |
+| `lab` | string (CSV) | Фильтр по `modelLab` (лаборатории-автору модели). CSV для нескольких значений. |
 | `tag` | string (CSV) | Тэги: `realism,lora`. **AND-семантика** — модель должна нести **все** перечисленные тэги. |
 | `search` | string | Подстрочный поиск (case-insensitive) по `modelId`, `displayName`, `description`. До 64 символов. |
 | `sort` | enum | `popular` (default), `newest`, `price_asc`, `by_category` — см. ниже. |
@@ -57,10 +57,10 @@ curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=popular&limi
 
 ## Стратегии сортировки
 
-- **`popular`** (default) — сначала по `providerRank` (популярность у провайдера), потом по `publishedAt DESC`. Это «человеческий» порядок для UI listing.
-- **`newest`** — последние опубликованные модели сверху. Для feed-страницы «что нового».
+- **`popular`** (default) — сначала самые популярные, потом самые свежие. Подходит для общего листинга.
+- **`newest`** — последние добавленные модели сверху. Для feed-страницы «что нового».
 - **`price_asc`** — самые дешёвые сверху. Модели без цены идут в конец.
-- **`by_category`** — фиксированный порядок категорий (`text-to-image`, `image-to-image`, `text-to-video`, …) → внутри каждой `providerRank` → `publishedAt`. Для каталога с секциями.
+- **`by_category`** — фиксированный порядок категорий (`text-to-image`, `image-to-image`, `text-to-video`, …) с группировкой внутри. Удобно для каталога с секциями.
 
 ## Категории
 
@@ -80,10 +80,10 @@ curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=popular&limi
 
 ## Примеры
 
-### Все модели Google
+### Все модели одной лаборатории
 
 ```bash
-curl 'https://api.neuroartist.ru/models?lab=Google&limit=100'
+curl 'https://api.neuroartist.ru/models?lab=<modelLab>&limit=100'
 ```
 
 ### Дешёвые text-to-image

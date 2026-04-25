@@ -38,7 +38,7 @@ async function callWithRetry(url, init, maxRetries = 3) {
 }
 ```
 
-`503 provider_error` тоже отдаёт `Retry-After` — это circuit breaker, провайдер флапает. Стратегия та же.
+`503 provider_error` тоже отдаёт `Retry-After` — это circuit breaker, временная проблема, повторите через `Retry-After` секунд. Стратегия та же.
 
 ## Месячный лимит на ключ
 
