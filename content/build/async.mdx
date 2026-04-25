@@ -49,14 +49,12 @@ const result = await runAsync('flux/dev', {
 console.log(result.images[0].url)
 ```
 
-## Пайплайн
+## Эндпоинты в очереди
 
-```
-POST /queue/{modelId}                          → { requestId }
-GET  /queue/{modelId}/requests/{id}/progress/stream  ← SSE: queued → in_progress → completed
-GET  /queue/{modelId}/requests/{id}            → результат (можно перечитать)
-PUT  /queue/{modelId}/requests/{id}/cancel     → отмена с refund
-```
+- `POST /queue/{modelId}` — отправляет задачу, возвращает `requestId`.
+- `GET /queue/{modelId}/requests/{id}/progress/stream` — SSE-стрим прогресса. Стадии: `queued`, `in_progress`, `completed`, `failed`.
+- `GET /queue/{modelId}/requests/{id}` — финальный результат, можно перечитывать.
+- `PUT /queue/{modelId}/requests/{id}/cancel` — отмена с возвратом средств.
 
 ## Polling вместо SSE
 
