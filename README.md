@@ -92,15 +92,6 @@ docs/
 
 3. Hot-reload подхватит автоматически. Для production пересобрать поиск — `pnpm build`.
 
-## Соглашения
-
-- **Бренд:** «**НейроХудожник API**», не «Neuroartist API Gateway». Для пользователя — это единый сервис; не упоминать upstream-провайдеров (fal.ai и т.п.) в прозе.
-- **Терминология:** «баланс в рублях», не «кредиты». Поля API (`creditCost`, `creditsToGrant`) в JSON-примерах оставлять — это actual field names.
-- **Аутентификация:** только `Authorization: Bearer na_live_…`. Никаких упоминаний session-cookie / Better Auth — это внутренний механизм дашборда.
-- **modelId:** без префикса `fal-ai/` — `flux/dev`, не `fal-ai/flux/dev`.
-- **Никаких ASCII-схем** в прозе. Только списки и таблицы.
-- **Не более одной кнопки в navbar** (сейчас — «Дашборд ↗»).
-
 ## AI-friendly выходы
 
 | Endpoint | Назначение |
