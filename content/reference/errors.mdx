@@ -17,7 +17,7 @@ description: Машинно-читаемые коды и логика ветвл
 
 Ветвите по `code` (стабильный machine-readable). `message` — для человека (может меняться). `details` — context-specific.
 
-## Cheat-sheet
+## Сводная таблица
 
 | Status | Code | Когда | Что делать |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ description: Машинно-читаемые коды и логика ветвл
 | 503 | `storage_disabled` | (Uploads) S3 не настроен | Только в local-dev |
 | 504 | `timeout` | Sync `/run` истёк за 5 мин | См. 202 ответ — `requestId` для `/queue` |
 
-## Validation error shape
+## Формат ошибки валидации
 
 ```json
 {
@@ -64,7 +64,7 @@ description: Машинно-читаемые коды и логика ветвл
 }
 ```
 
-## Insufficient balance
+## Недостаток средств
 
 ```json
 {
@@ -76,7 +76,7 @@ description: Машинно-читаемые коды и логика ветвл
 
 Используйте `details.required - details.available` для UI-сообщения "не хватает 7 ₽".
 
-## Rate limit
+## Превышение лимита
 
 ```http
 HTTP/1.1 429 Too Many Requests

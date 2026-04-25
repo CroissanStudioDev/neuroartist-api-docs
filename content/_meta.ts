@@ -1,11 +1,8 @@
 export default {
-  index: {
-    title: 'Введение',
-    theme: { layout: 'default', sidebar: true, toc: true }
-  },
-  'get-started': 'Get started',
-  generate: 'Generate',
-  build: 'Build',
-  manage: 'Manage',
-  reference: 'Reference'
+  index: 'Введение',
+  'get-started': 'Начало работы',
+  generate: 'Что генерировать',
+  build: 'Интеграция',
+  manage: 'Аккаунт',
+  reference: 'Справочник'
 }

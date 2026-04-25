@@ -1,9 +1,9 @@
 export default {
-  cheatsheet: 'Cheatsheet',
+  cheatsheet: 'Шпаргалка по API',
   errors: 'Коды ошибок',
-  'rate-limits': 'Rate limits',
-  sse: 'SSE-формат',
-  webhooks: 'Webhooks-формат',
+  'rate-limits': 'Лимиты запросов',
+  sse: 'Формат SSE-стрима',
+  webhooks: 'Формат webhooks',
   'asset-hosting': 'Хранение результатов',
-  api: 'API endpoints'
+  api: 'Справочник эндпоинтов'
 }

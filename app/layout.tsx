@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Golos_Text } from 'next/font/google'
 import type { ReactNode } from 'react'
-import { Footer, Layout, Navbar } from 'nextra-theme-docs'
+import { Footer, LastUpdated, Layout, Navbar } from 'nextra-theme-docs'
 import { Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
 
-// Brand typeface — source of truth: gateway.neuroartist.ru.
 const golosText = Golos_Text({
   variable: '--font-golos-text',
   subsets: ['latin', 'cyrillic'],
@@ -42,7 +41,6 @@ const navbar = (
         Neuroartist <span style={{ opacity: 0.55 }}>API Gateway</span>
       </span>
     }
-    projectLink="https://github.com/neuroartist/neuroartist-api-gateway"
   />
 )
 
@@ -61,7 +59,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/neuroartist/docs/tree/main"
           footer={footer}
           darkMode={false}
           nextThemes={{ forcedTheme: 'light', defaultTheme: 'light' }}
@@ -75,8 +72,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               errorText="Ошибка поиска."
             />
           }
-          editLink="Править эту страницу на GitHub"
-          feedback={{ content: 'Нашли ошибку? Сообщите →', labels: 'feedback' }}
+          editLink={null}
+          feedback={{ content: '' }}
+          navigation={{ prev: true, next: true }}
+          copyPageButton={false}
+          lastUpdated={<LastUpdated locale="ru-RU">Обновлено</LastUpdated>}
         >
           {children}
         </Layout>

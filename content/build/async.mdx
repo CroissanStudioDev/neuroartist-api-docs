@@ -3,7 +3,7 @@ title: Async + SSE
 description: Submit, стрим прогресса, забор результата
 ---
 
-# Async + SSE
+# Асинхронная очередь и SSE
 
 Submit возвращает `requestId` сразу. Прогресс — через SSE.
 
@@ -49,7 +49,7 @@ const result = await runAsync('fal-ai/flux/dev', {
 console.log(result.images[0].url)
 ```
 
-## Pipeline
+## Пайплайн
 
 ```
 POST /queue/{modelId}                          → { requestId }
@@ -102,11 +102,11 @@ const results = await Promise.all(ids.map(waitForCompletion))
 
 Лимит SSE-стримов — `SSE_MAX_CONNECTIONS_PER_USER` (default 5).
 
-## Late-join
+## Подключение после завершения
 
 Можно подключиться к `progress/stream` **после** terminal-стадии — gateway отдаст последнее событие и закроет стрим. Удобно для UI после refresh с сохранённым `requestId`.
 
-## Hybrid (recommended for prod)
+## Гибридный паттерн для production
 
 - **Submit + webhook** — серверный path (idempotent, переживает рестарты).
 - **SSE** — UX в браузере, опционально, поверх того же `requestId`.

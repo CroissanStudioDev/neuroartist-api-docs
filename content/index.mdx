@@ -17,7 +17,12 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 ```
 
 ```json
-{ "images": [{ "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }], "seed": 12345 }
+{
+  "images": [
+    { "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }
+  ],
+  "seed": 12345
+}
 ```
 
 ## С чего начать
@@ -25,41 +30,41 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 import { Cards } from 'nextra/components'
 
 <Cards num={2}>
-  <Cards.Card title="Quickstart" href="/get-started/quickstart" arrow>
-    Регистрация → API-ключ → первый запрос. 60 секунд.
+  <Cards.Card title="Быстрый старт" href="/get-started/quickstart" arrow>
+    Регистрация, API-ключ, первый запрос. 60 секунд.
   </Cards.Card>
   <Cards.Card title="Аутентификация" href="/get-started/authentication" arrow>
-    Session или API-ключ. Когда что использовать.
+    Сессия или API-ключ. Когда что использовать.
   </Cards.Card>
 </Cards>
 
 ## Что генерировать
 
-<Cards num={3}>
+<Cards num={2}>
   <Cards.Card title="Изображения" href="/generate/images" arrow>
     text-to-image, image-to-image, inpainting
   </Cards.Card>
   <Cards.Card title="Видео" href="/generate/video" arrow>
-    text-to-video, image-to-video, длительные задачи
+    text-to-video, image-to-video
   </Cards.Card>
   <Cards.Card title="Аудио" href="/generate/audio" arrow>
-    TTS, voice-cloning, music
+    TTS, voice-cloning, музыка
   </Cards.Card>
 </Cards>
 
 ## Как интегрировать
 
 <Cards num={2}>
-  <Cards.Card title="Sync — POST /run" href="/build/sync" arrow>
-    Один запрос — один результат. До 5 минут.
+  <Cards.Card title="Синхронный запрос" href="/build/sync" arrow>
+    POST /run — один запрос, один результат, до 5 минут.
   </Cards.Card>
-  <Cards.Card title="Async + SSE" href="/build/async" arrow>
-    Submit → стрим прогресса → результат.
+  <Cards.Card title="Асинхронно с прогрессом" href="/build/async" arrow>
+    POST /queue + SSE — для длинных генераций.
   </Cards.Card>
   <Cards.Card title="Webhooks" href="/build/webhooks" arrow>
     Подписанные callbacks. Готовый код приёмника.
   </Cards.Card>
-  <Cards.Card title="Загрузка input-файлов" href="/build/upload-inputs" arrow>
+  <Cards.Card title="Загрузка входных файлов" href="/build/upload-inputs" arrow>
     Для img2img, video2video, voice-clone.
   </Cards.Card>
 </Cards>
@@ -68,24 +73,24 @@ import { Cards } from 'nextra/components'
 
 <Cards num={2}>
   <Cards.Card title="Биллинг и кредиты" href="/manage/billing" arrow>
-    Top-up YooKassa, чеки, refund при сбое.
+    Top-up через YooKassa, чеки, refund при сбое.
   </Cards.Card>
   <Cards.Card title="Авто-пополнение" href="/manage/auto-topup" arrow>
-    Auto-charge при просадке баланса.
+    Автоматическое пополнение баланса при просадке.
   </Cards.Card>
 </Cards>
 
-## Reference
+## Справочник
 
-<Cards num={3}>
-  <Cards.Card title="Cheatsheet" href="/reference/cheatsheet" arrow>
+<Cards num={2}>
+  <Cards.Card title="Шпаргалка по API" href="/reference/cheatsheet" arrow>
     Все эндпоинты на одной странице.
   </Cards.Card>
-  <Cards.Card title="API endpoints" href="/reference/api" arrow>
-    Полный справочник со схемами.
+  <Cards.Card title="Справочник эндпоинтов" href="/reference/api" arrow>
+    Полное описание со схемами тел и ответов.
   </Cards.Card>
-  <Cards.Card title="Errors" href="/reference/errors" arrow>
-    Коды ошибок и логика ветвления.
+  <Cards.Card title="Коды ошибок" href="/reference/errors" arrow>
+    Машинно-читаемые коды и логика ветвления.
   </Cards.Card>
 </Cards>
 

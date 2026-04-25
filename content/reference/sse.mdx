@@ -7,7 +7,7 @@ description: Push-стрим стадий генерации вместо pollin
 
 Async-режим (`POST /queue`) возвращает `requestId` сразу. Чтобы получить terminal-результат push-ом, а не опросом — подписывайтесь на SSE.
 
-## Endpoint
+## Эндпоинт
 
 ```
 GET /queue/{modelId}/requests/{requestId}/progress/stream
@@ -72,7 +72,7 @@ await fetchEventSource(
 
 В браузере `EventSource` тоже работает (через session-cookie + `withCredentials: true`), но не поддерживает custom headers — для API-key используйте `fetchEventSource` или `fetch` с `ReadableStream`.
 
-## Heartbeat
+## Heartbeat-фреймы
 
 Каждые `SSE_HEARTBEAT_MS` мс (default 15000):
 
@@ -82,7 +82,7 @@ await fetchEventSource(
 
 Comment-фрейм для удержания соединения через reverse-proxy. Клиент игнорирует.
 
-## Late-join
+## Подключение после завершения
 
 Можно подключиться **после** terminal-стадии: gateway отдаст последнее событие и закроет стрим. Удобно для refresh страниц с сохранённым `requestId`.
 

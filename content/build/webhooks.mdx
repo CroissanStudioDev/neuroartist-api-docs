@@ -5,9 +5,9 @@ description: Готовый код приёмника с валидацией п
 
 import { Tabs } from 'nextra/components'
 
-# Принять webhook
+# Приём webhook
 
-## Setup
+## Подключение
 
 ```bash
 # 1. Получить webhook secret (session-only)
@@ -24,7 +24,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://a
   -d '{"prompt":"…"}'
 ```
 
-## Receiver
+## Код приёмника
 
 <Tabs items={['Hono', 'Next.js Route Handler', 'Express', 'FastAPI']}>
   <Tabs.Tab>
@@ -177,7 +177,7 @@ async def cb(req: Request):
   </Tabs.Tab>
 </Tabs>
 
-## Body
+## Тело запроса
 
 ```json
 {

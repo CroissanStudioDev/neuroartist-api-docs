@@ -16,7 +16,7 @@ Push-уведомление о завершении генерации на ва
 | Видео-генерация / batched job | **Webhook** |
 | Retries при ошибке | **Webhook** (6 попыток с backoff) |
 
-## Setup
+## Подключение
 
 1. Получите webhook secret: `POST /me/webhook-secret/rotate` (session-only).
 2. Подготовьте HTTPS-endpoint, отвечающий `200 OK`.
@@ -29,7 +29,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   -d '{"prompt":"…"}'
 ```
 
-## Headers и body
+## Заголовки и тело
 
 ```
 POST /cb HTTP/1.1
@@ -101,7 +101,7 @@ const seen = await redis.set(`wh:${id}`, '1', 'NX', 'EX', 86400)
 if (seen === null) return res.status(200).end()
 ```
 
-## Retries
+## Повторные попытки
 
 | Попытка | Задержка |
 | --- | --- |

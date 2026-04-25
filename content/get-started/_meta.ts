@@ -1,4 +1,4 @@
 export default {
-  quickstart: 'Quickstart',
+  quickstart: 'Быстрый старт',
   authentication: 'Аутентификация'
 }

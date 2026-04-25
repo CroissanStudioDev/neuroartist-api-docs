@@ -3,7 +3,7 @@ title: Загрузить input
 description: Загрузка файла для img2img / video2video / voice-clone
 ---
 
-# Загрузить input
+# Загрузка входных файлов
 
 Многие модели принимают `image_url` / `video_url` / `audio_url`. Чтобы передать свой файл — сначала загрузите его в gateway.
 
@@ -15,7 +15,7 @@ field: file
 
 **Session-only.** API-ключ не принимается.
 
-## Recipe
+## Готовый рецепт
 
 ```bash
 curl -X POST https://api.neuroartist.ru/me/uploads \
@@ -45,7 +45,7 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev/image-to-image \
   }'
 ```
 
-## Browser
+## Из браузера
 
 ```js
 async function upload(file) {

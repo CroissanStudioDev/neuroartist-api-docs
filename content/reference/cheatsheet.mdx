@@ -1,15 +1,15 @@
 ---
-title: Cheatsheet
-description: Все эндпоинты на одной странице
+title: Шпаргалка по API
+description: Все публичные эндпоинты на одной странице
 ---
 
-# Cheatsheet
+# Шпаргалка по API
 
 Все публичные эндпоинты gateway-а. Базовый URL: `https://api.neuroartist.ru`.
 
-`s` — session-only · `a` — API-key или session · `—` — публичная.
+Колонка слева: `s` — только сессия · `a` — API-ключ или сессия · `—` — публичная.
 
-## Auth (`/api/auth/*`)
+## Аутентификация (`/api/auth/*`)
 
 | | Метод | Путь | Что |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ description: Все эндпоинты на одной странице
 | a | `GET` | `/billing/payments/{id}` | Детали платежа |
 | s | `GET` | `/billing/payments/{id}/receipt` | Редирект на чек |
 
-## Health & Discovery
+## Health и discovery
 
 | | Метод | Путь | Что |
 | --- | --- | --- | --- |
@@ -111,7 +111,7 @@ description: Все эндпоинты на одной странице
 | sig | `POST` | `/webhooks/{providerId}` | Callback от провайдера (ED25519) |
 | ip | `POST` | `/webhooks/yookassa/notify` | Callback от YooKassa (IP whitelist) |
 
-## Headers
+## Заголовки запроса и ответа
 
 ```
 Authorization: Bearer na_live_xxxxxxxxxxxxxxxx
@@ -123,7 +123,7 @@ X-RateLimit-Reset: <unix-timestamp>
 Retry-After: <seconds>                ← при 429/503
 ```
 
-## Envelope ошибок
+## Формат ошибки
 
 ```json
 { "code": "insufficient_balance", "message": "Not enough credits", "details": { "required": 12, "available": 5 } }

@@ -3,11 +3,11 @@ title: Сгенерировать изображение
 description: Один POST — один результат. Sync-режим до 5 минут
 ---
 
-# Сгенерировать изображение
+# Синхронный запрос — POST /run
 
 Sync-режим — один HTTP-запрос, один ответ. Подходит для image-генераций ≤ 30 сек.
 
-## Recipe
+## Готовый рецепт
 
 ```bash
 curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
@@ -131,7 +131,7 @@ try {
 
 Полный список — [Errors](/reference/errors).
 
-## Estimate перед запуском
+## Оценка стоимости перед запуском
 
 ```bash
 curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
