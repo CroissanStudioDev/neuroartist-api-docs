@@ -3,6 +3,7 @@ export default {
   index: 'Введение',
   quickstart: 'Быстрый старт',
   authentication: 'Аутентификация',
+  mcp: 'MCP-сервер',
   '-- usage': { type: 'separator', title: 'Использование' },
   generate: 'Каталог моделей',
   build: 'Генерация',
@@ -13,6 +14,5 @@ export default {
   api: 'API Reference',
   '-- tools': { type: 'separator', title: 'Инструменты' },
   cli: 'CLI — `na`',
-  skill: 'Skill для AI',
-  mcp: 'MCP-сервер'
+  skill: 'Skill для AI'
 }
