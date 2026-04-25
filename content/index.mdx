@@ -21,6 +21,10 @@ https://api.neuroartist.ru
 
 ## Для AI-агентов
 
-`/llms.txt` — компактный markdown-конспект документации.
-`/llms-full.txt` — полная документация одним файлом.
-OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU).
+- **[MCP-сервер](/mcp)** — `https://docs.neuroartist.ru/mcp/mcp` для Claude Desktop, Cursor, VS Code и Claude Code. Документация подключается как live-источник: `list_docs`, `get_doc`, `search_docs`.
+- **[Skill `neuroartist-media`](/skill)** — готовый Agent Skill для Claude Code / Cursor / Codex. Учит агента подбирать модели, считать стоимость и оркестрировать генерацию через CLI.
+- **[CLI `na`](/cli)** — командная строка с JSON-envelope `schemaVersion: 1` и granular exit-кодами для скриптов и агентов.
+- **`/llms.txt`** — компактный markdown-конспект документации (~10 KB).
+- **`/llms-full.txt`** — вся документация одним файлом (~120 KB).
+- **OpenAPI 3.1** — [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN) и [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU) для генерации SDK.
+- **«Скопировать страницу»** в шапке любой страницы — копирует Markdown в буфер, открывает её в ChatGPT или Claude одним кликом.
