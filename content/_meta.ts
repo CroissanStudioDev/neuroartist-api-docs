@@ -10,5 +10,7 @@ export default {
   '-- ref': { type: 'separator', title: 'Справочник' },
   errors: 'Коды ошибок',
   'rate-limits': 'Лимиты запросов',
-  api: 'API Reference'
+  api: 'API Reference',
+  '-- agents': { type: 'separator', title: 'Для AI-агентов' },
+  mcp: 'MCP-сервер'
 }

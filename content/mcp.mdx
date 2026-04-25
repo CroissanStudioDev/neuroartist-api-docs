@@ -1,0 +1,116 @@
+---
+title: MCP-сервер
+description: Подключите документацию НейроХудожник API в Claude Desktop, Cursor, VS Code и другие MCP-клиенты
+---
+
+import { Tabs, Callout } from 'nextra/components'
+
+# MCP-сервер документации
+
+Вся документация публикуется по протоколу **Model Context Protocol (MCP)** — открытому стандарту от Anthropic для подключения инструментов и источников данных к LLM-клиентам. Это значит, что ваш ассистент в IDE сможет искать и читать нашу документацию **напрямую**, без копирования и переключений.
+
+**URL сервера:**
+
+```
+https://docs.neuroartist.ru/mcp/mcp
+```
+
+## Что умеет
+
+| Tool | Описание |
+| --- | --- |
+| `list_docs` | Список всех страниц с заголовками и описаниями |
+| `get_doc` | Полный markdown выбранной страницы по `route` (например `/api/run`) |
+| `search_docs` | Подстрочный поиск по всем страницам с превью совпадений |
+
+Никакой авторизации не требуется — каталог публичный.
+
+## Подключение
+
+<Tabs items={['Claude Desktop', 'Cursor', 'VS Code (Claude)', 'Claude Code CLI']}>
+  <Tabs.Tab>
+
+В **Settings → Developer → Edit Config** добавьте:
+
+```json filename="claude_desktop_config.json"
+{
+  "mcpServers": {
+    "neuroartist-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://docs.neuroartist.ru/mcp/mcp"
+      ]
+    }
+  }
+}
+```
+
+Перезапустите Claude Desktop. В чате появится индикатор инструментов «🔧 neuroartist-docs».
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+**Cursor → Settings → MCP → Add new server**:
+
+```json
+{
+  "neuroartist-docs": {
+    "url": "https://docs.neuroartist.ru/mcp/mcp"
+  }
+}
+```
+
+Cursor поддерживает streamable-HTTP transport напрямую.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+В `~/.vscode/mcp.json` (или в settings.json под ключом `mcp.servers`):
+
+```json
+{
+  "servers": {
+    "neuroartist-docs": {
+      "type": "http",
+      "url": "https://docs.neuroartist.ru/mcp/mcp"
+    }
+  }
+}
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+claude mcp add --transport http neuroartist-docs https://docs.neuroartist.ru/mcp/mcp
+```
+
+После этого в любой `claude` сессии будут доступны три tools — `list_docs`, `get_doc`, `search_docs`.
+
+  </Tabs.Tab>
+</Tabs>
+
+## Пример использования
+
+После подключения попробуйте такие запросы в чате:
+
+- «Покажи как сделать webhook-приёмник в нашем NeuroArtist API»
+- «Какие есть категории моделей в каталоге?»
+- «Сгенерируй TypeScript-клиент для image-to-image из flux/dev»
+- «Что возвращает /me/balance?»
+
+Ассистент сам выберет нужный tool, найдёт релевантные страницы и приведёт точные параметры из документации.
+
+<Callout type="info">
+  Ассистент работает с **тем же контентом**, что и эта документация — никаких устаревших копий. Каждый запрос идёт в актуальную версию каталога моделей, эндпоинтов и кодов ошибок.
+</Callout>
+
+## Альтернативы для AI-агентов
+
+Если MCP-клиент недоступен, для подачи документации в любой LLM используйте:
+
+- **`/llms.txt`** — компактный markdown-конспект (~10 KB, основные страницы).
+- **`/llms-full.txt`** — вся документация одним файлом (~100 KB).
+- **«Скопировать страницу → Открыть в ChatGPT/Claude»** — кнопка в шапке каждой страницы.
