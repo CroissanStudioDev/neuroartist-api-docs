@@ -1,0 +1,163 @@
+---
+title: Изображения
+description: text-to-image, image-to-image, inpainting через POST /run или /queue
+---
+
+# Генерация изображений
+
+Любая image-модель из каталога. Один POST → готовая картинка через 3–30 секунд.
+
+## Минимальный пример
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "editorial portrait, monochrome, soft daylight",
+    "image_size": "portrait_4_3"
+  }'
+```
+
+```json
+{
+  "images": [{ "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }],
+  "seed": 12345,
+  "timings": { "inference": 4.21 }
+}
+```
+
+URL живёт в нашем S3 пока вы его не удалите.
+
+## Популярные модели
+
+| modelId | Назначение | Цена за image |
+| --- | --- | --- |
+| `fal-ai/flux/dev` | Универсальная text-to-image, FLUX.1 dev | 8 ₽ |
+| `fal-ai/flux-pro/v1.1-ultra` | Премиум, до 4K | 25 ₽ |
+| `fal-ai/flux/dev/image-to-image` | img2img со strength | 8 ₽ |
+| `fal-ai/flux-lora` | text-to-image с LoRA-адаптерами | 12 ₽ |
+| `fal-ai/recraft-v3` | Векторная иллюстрация, точная типографика | 18 ₽ |
+| `fal-ai/nano-banana` | Высокое качество, быстро | 6 ₽ |
+| `fal-ai/stable-diffusion-3.5-large` | SD 3.5 Large | 10 ₢ |
+
+Полный каталог — `GET /models?category=image` или [/generate/models](/generate/models).
+
+## Параметры
+
+Тело запроса — input модели по её JSON Schema. Получить:
+
+```bash
+curl https://api.neuroartist.ru/models/fal-ai/flux/dev | jq .schema
+```
+
+Общие поля у image-моделей:
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `prompt` | string | Описание желаемого изображения |
+| `negative_prompt` | string | Что **не** должно быть |
+| `image_size` | string \| `{width,height}` | `square_hd`, `portrait_4_3`, `landscape_16_9`, либо custom |
+| `num_inference_steps` | int | Качество vs скорость, обычно 28 |
+| `seed` | int | Воспроизводимость |
+| `num_images` | int | 1–4 |
+
+## Image-to-image (img2img)
+
+Передаёте `image_url`, добавляете `strength` (0..1).
+
+```bash
+# 1. Загрузить input
+curl -X POST https://api.neuroartist.ru/me/uploads \
+  -b cookies.txt \
+  -F "file=@/path/to/photo.jpg"
+# {"assetId":"…","url":"https://s3.cloud.ru/neuroartist/uploads/…"}
+
+# 2. Сгенерировать вариацию
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev/image-to-image \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "prompt": "make it watercolor",
+    "strength": 0.65
+  }'
+```
+
+Подробнее про upload — [Build → Upload inputs](/build/upload-inputs).
+
+## Длинные генерации
+
+FLUX dev/pro — 3–10 секунд. Если **batched** или **upscale-модель** превышает 60 секунд, переходите на async с SSE:
+
+```js
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+
+const submit = await fetch(
+  'https://api.neuroartist.ru/queue/fal-ai/flux-pro/v1.1-ultra',
+  {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.NA_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ prompt: '…', aspect_ratio: '4:3' })
+  }
+).then(r => r.json())
+
+// Подписка на прогресс
+fetchEventSource(
+  `https://api.neuroartist.ru/queue/fal-ai/flux-pro/v1.1-ultra/requests/${submit.requestId}/progress/stream`,
+  {
+    headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` },
+    onmessage(msg) {
+      const e = JSON.parse(msg.data)
+      if (e.stage === 'completed') console.log(e.result.images[0].url)
+    }
+  }
+)
+```
+
+Подробнее — [Build → Async + SSE](/build/async).
+
+## Что вернётся
+
+```json
+{
+  "images": [
+    {
+      "url": "https://s3.cloud.ru/neuroartist/.../result.webp",
+      "width": 768,
+      "height": 1024,
+      "content_type": "image/webp"
+    }
+  ],
+  "seed": 12345,
+  "timings": { "inference": 4.21 },
+  "has_nsfw_concepts": [false]
+}
+```
+
+При `num_images > 1` — массив из нескольких объектов.
+
+`url` — наш S3 (Cloud.ru). Если нужны оригинальные ссылки fal.ai, добавьте `?passthrough=1` (но они умрут через ~24 часа).
+
+## Стоимость
+
+```bash
+curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"…","num_images":4}'
+```
+
+```json
+{ "modelId": "fal-ai/flux/dev", "estimatedCostRub": 32, "priceUnit": "image", "quantity": 4 }
+```
+
+## Дальше
+
+- [Все image-модели](/generate/models) — каталог с фильтрами.
+- [Загрузка input-файлов](/build/upload-inputs) — для img2img, inpainting.
+- [Async + SSE](/build/async) — для длинных пайплайнов.
+- [Webhooks](/build/webhooks) — для серверной обработки без UI.

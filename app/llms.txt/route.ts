@@ -5,8 +5,9 @@ export const dynamic = 'force-static'
 
 const PAGES = [
   ['Введение', 'index.mdx'],
-  ['Quickstart', 'quickstart.mdx'],
-  ['Cheatsheet', 'cheatsheet.mdx']
+  ['Quickstart', 'get-started/quickstart.mdx'],
+  ['Аутентификация', 'get-started/authentication.mdx'],
+  ['Cheatsheet', 'reference/cheatsheet.mdx']
 ] as const
 
 export async function GET() {

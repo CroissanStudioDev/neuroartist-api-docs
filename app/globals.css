@@ -1,38 +1,15 @@
-/* Neuroartist API Gateway docs — design system mirrors gateway.neuroartist.ru.
-   Source: neuroartist-api-gateway-web/app/globals.css (oklch tokens). */
+/* Минимальный override Nextra-темы под gateway.neuroartist.ru:
+   акцентный lime brand + шрифт Golos Text. Всё остальное — base theme. */
 
-/* Brand tokens — applied unconditionally. */
-:root,
-html.light,
-html.dark {
-  --brand: oklch(0.62 0.16 128);
-  --brand-hover: oklch(0.67 0.17 128);
-  --brand-active: oklch(0.55 0.16 128);
-  --brand-tint: oklch(0.62 0.16 128 / 0.1);
-  --brand-ring: oklch(0.62 0.16 128 / 0.5);
-
-  --background: oklch(0.985 0.002 265);
-  --foreground: oklch(0.16 0.005 285);
-  --surface-light: oklch(0.968 0.002 265);
-  --muted: oklch(0.96 0.002 265);
-  --muted-foreground: oklch(0.5 0.003 265);
-  --border: oklch(0 0 0 / 8%);
-}
-
-/* Nextra-theme variables live on `html.light` — must match specificity. */
 html,
 html.light {
+  /* lime green #6FA31B — оттенок из neuroartist-api-gateway-web/app/globals.css */
   --nextra-primary-hue: 110deg;
   --nextra-primary-saturation: 72%;
   --nextra-primary-lightness: 37%;
-  --nextra-bg: 250, 250, 251;
-  --nextra-content-width: 80rem;
 }
 
 html {
-  color-scheme: light;
-  background: var(--background);
-  color: var(--foreground);
   font-family:
     var(--font-golos-text),
     ui-sans-serif,
@@ -41,11 +18,6 @@ html {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  font-feature-settings:
-    "rlig" 1,
-    "calt" 1;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
 code,
@@ -54,129 +26,4 @@ kbd,
 samp {
   font-family:
     var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-feature-settings: normal;
-}
-
-/* ----- Nextra-theme-docs overrides ------------------------------------ */
-
-/* Selection */
-::selection {
-  background: var(--brand-tint);
-  color: var(--foreground);
-}
-
-/* Inline code — subtle lime tint */
-:where(article) :not(pre) > code {
-  background: var(--brand-tint);
-  color: oklch(0.45 0.16 128);
-  border: 1px solid color-mix(in oklab, var(--brand) 15%, transparent);
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
-  font-size: 0.875em;
-}
-
-/* Body text inside article */
-article {
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-article h1 {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-article h2 {
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-
-article h3,
-article h4 {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-/* Logo + links — brand */
-article a:not(:where(.x\:no-underline, [class*="anchor"])) {
-  text-decoration-color: color-mix(in oklab, var(--brand) 50%, transparent);
-  text-underline-offset: 0.2em;
-}
-
-article a:not(:where(.x\:no-underline, [class*="anchor"])):hover {
-  text-decoration-color: var(--brand);
-}
-
-/* Tables — light borders, subtle row separation */
-article table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  font-size: 0.9375rem;
-}
-
-article table th,
-article table td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.625rem 0.875rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-article table th {
-  font-weight: 600;
-  color: var(--foreground);
-  background: var(--surface-light);
-}
-
-article table tr:last-child td {
-  border-bottom: none;
-}
-
-/* Code blocks — softer surface, no shadow */
-article pre,
-article :where(figure) pre {
-  background: var(--surface-light);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-/* Sidebar active item — lime accent */
-[data-pagefind-ignore] aside [class*="active"],
-aside a[aria-current="page"] {
-  color: var(--brand-active);
-  background: var(--brand-tint);
-}
-
-/* Scrollbar — thin */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--foreground) 18%, transparent);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklab, var(--foreground) 32%, transparent);
-}
-
-/* Focus ring — brand */
-:focus-visible {
-  outline: 2px solid var(--brand-ring);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Disable dark-mode media-query application — light-only site */
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: light;
-    background: var(--background);
-    color: var(--foreground);
-  }
 }

@@ -11,7 +11,7 @@ Push-уведомление о завершении генерации на ва
 
 | Хочу | Решение |
 | --- | --- |
-| Real-time UI в браузере | [SSE](/concepts/sse) |
+| Real-time UI в браузере | [SSE](/reference/sse) |
 | Серверный pipeline без активного клиента | **Webhook** |
 | Видео-генерация / batched job | **Webhook** |
 | Retries при ошибке | **Webhook** (6 попыток с backoff) |
@@ -115,7 +115,7 @@ if (seen === null) return res.status(200).end()
 
 ## Полный код приёмника
 
-→ [Recipe: Receive webhooks](/guides/webhook-receiver) (Hono / Next / Express / FastAPI).
+→ [Recipe: Receive webhooks](/build/webhooks) (Hono / Next / Express / FastAPI).
 
 ## Внутренние webhooks (НЕ для вас)
 

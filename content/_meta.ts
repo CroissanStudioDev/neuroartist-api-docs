@@ -1,20 +1,11 @@
 export default {
-  index: 'Введение',
-  quickstart: 'Quickstart',
-  cheatsheet: 'Cheatsheet',
-  '-- guides': {
-    type: 'separator',
-    title: 'Гайды'
+  index: {
+    title: 'Введение',
+    theme: { layout: 'default', sidebar: true, toc: true }
   },
-  guides: 'Recipes',
-  '-- concepts': {
-    type: 'separator',
-    title: 'Концепции'
-  },
-  concepts: 'Платформа',
-  '-- api': {
-    type: 'separator',
-    title: 'Reference'
-  },
-  api: 'API Reference'
+  'get-started': 'Get started',
+  generate: 'Generate',
+  build: 'Build',
+  manage: 'Manage',
+  reference: 'Reference'
 }

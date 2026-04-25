@@ -9,7 +9,7 @@ import { Callout } from 'nextra/components'
 
 Async-режим: submit возвращает `requestId` сразу, terminal-состояние получаете через polling, SSE или webhook.
 
-Концептуальный гайд — [Async + SSE](/guides/async-generation).
+Концептуальный гайд — [Async + SSE](/build/async).
 
 ## `POST /queue/{modelId}`
 
@@ -103,7 +103,7 @@ Late-join — поддерживается. Подключение после te
 
 **Лимит:** `SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5). Превышение — `429 too_many_sse_connections`.
 
-Подробнее — [Concepts → SSE](/concepts/sse).
+Подробнее — [Concepts → SSE](/reference/sse).
 
 ## `GET /queue/{modelId}/requests/{requestId}`
 
@@ -155,4 +155,4 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   ...
 ```
 
-После terminal-состояния gateway POST-ит JSON на ваш URL. Подробнее — [Webhooks](/concepts/webhooks).
+После terminal-состояния gateway POST-ит JSON на ваш URL. Подробнее — [Webhooks](/reference/webhooks).

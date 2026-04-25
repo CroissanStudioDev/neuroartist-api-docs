@@ -1,0 +1,109 @@
+---
+title: Аудио
+description: TTS, voice-cloning, music через POST /run
+---
+
+# Генерация аудио
+
+TTS (text-to-speech), музыка, voice-cloning. Большинство моделей укладываются в sync-режим — используйте `POST /run`.
+
+## Минимальный пример — TTS
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/kokoro/american-english \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "The quick brown fox jumps over the lazy dog.",
+    "voice": "af_bella"
+  }'
+```
+
+```json
+{
+  "audio": {
+    "url": "https://s3.cloud.ru/neuroartist/.../result.wav",
+    "content_type": "audio/wav",
+    "duration": 3.2
+  }
+}
+```
+
+## Популярные модели
+
+| modelId | Назначение | Цена |
+| --- | --- | --- |
+| `fal-ai/kokoro/american-english` | TTS быстрый, English | 1 ₽ / запрос |
+| `fal-ai/elevenlabs/tts/multilingual-v2` | ElevenLabs TTS, multilingual | 6 ₽ / 1000 символов |
+| `fal-ai/elevenlabs/voice-cloning` | Клонирование голоса | 30 ₽ / клон |
+| `fal-ai/cassetteai/music-generator` | Музыка из prompt | 12 ₽ / 30 сек |
+| `fal-ai/stable-audio` | Stable Audio | 8 ₽ / 10 сек |
+| `fal-ai/whisper` | Распознавание речи (audio → text) | 3 ₽ / минута |
+
+Полный каталог — `GET /models?category=audio` или [/generate/models](/generate/models).
+
+## Voice cloning
+
+```bash
+# 1. Загрузить reference голос (5–30 секунд чистой речи)
+curl -X POST https://api.neuroartist.ru/me/uploads \
+  -b cookies.txt \
+  -F "file=@/path/to/voice-sample.wav"
+# {"url":"https://s3.cloud.ru/neuroartist/uploads/…"}
+
+# 2. Создать клон
+curl -X POST https://api.neuroartist.ru/run/fal-ai/elevenlabs/voice-cloning \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "name": "my-voice"
+  }'
+# Получите voiceId
+
+# 3. Использовать в TTS
+curl -X POST https://api.neuroartist.ru/run/fal-ai/elevenlabs/tts/multilingual-v2 \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hello, world","voice_id":"<voiceId>"}'
+```
+
+## Speech-to-text
+
+```bash
+# 1. Загрузить аудио
+curl -X POST https://api.neuroartist.ru/me/uploads \
+  -b cookies.txt \
+  -F "file=@/path/to/recording.mp3"
+
+# 2. Распознать
+curl -X POST https://api.neuroartist.ru/run/fal-ai/whisper \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "task": "transcribe",
+    "language": "ru"
+  }'
+```
+
+```json
+{ "text": "распознанный текст", "chunks": [...] }
+```
+
+## Поддерживаемые форматы
+
+Допустимые MIME для `POST /me/uploads`:
+
+```
+audio/mpeg     audio/mp3      audio/wav      audio/wave     audio/x-wav
+audio/webm     audio/mp4      audio/ogg      audio/flac
+```
+
+Лимит размера — `MAX_UPLOAD_BYTES` (10 MiB по умолчанию). Подробнее — [Build → Upload inputs](/build/upload-inputs).
+
+## Дальше
+
+- [Все audio-модели](/generate/models) — каталог.
+- [Sync — POST /run](/build/sync) — детали sync-вызова.
+- [Загрузка input-файлов](/build/upload-inputs) — для voice-clone, STT.

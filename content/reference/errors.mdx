@@ -37,7 +37,7 @@ description: Машинно-читаемые коды и логика ветвл
 | 413 | `asset_too_large` | Файл > `MAX_UPLOAD_BYTES` | Сожмите |
 | 413 | `payload_too_large` | Тело > `MAX_BODY_BYTES` | |
 | 415 | `unsupported_media_type` | Content-Type не allowlist | |
-| 415 | `unsupported_mime` | (Uploads) MIME не allowlist | См. allowed list в [/guides/uploads](/guides/uploads) |
+| 415 | `unsupported_mime` | (Uploads) MIME не allowlist | См. allowed list в [/build/upload-inputs](/build/upload-inputs) |
 | 429 | `rate_limited` | IP/user/key лимит | `Retry-After` |
 | 429 | `key_limit_exceeded` | Месячный лимит ключа | Поднимите через `PATCH /me/keys/{id}` |
 | 429 | `too_many_sse_connections` | > `SSE_MAX_CONNECTIONS_PER_USER` | Закройте старые EventSource |

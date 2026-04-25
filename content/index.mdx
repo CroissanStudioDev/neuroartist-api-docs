@@ -1,19 +1,15 @@
 ---
-title: Neuroartist API Gateway
-description: Единый HTTPS-эндпоинт к генеративным моделям с кредитным биллингом и SSE-прогрессом
-asIndexPage: true
+title: Введение
+description: Один HTTPS-эндпоинт к генеративным моделям с кредитным биллингом и SSE-прогрессом
 ---
 
 # Neuroartist API Gateway
 
-Один HTTPS-эндпоинт к генеративным моделям (image / video / audio). API-ключ, кредитный биллинг, SSE-прогресс, S3-хранение результатов.
+Один HTTPS-эндпоинт к генеративным моделям image / video / audio. API-ключ, кредитный биллинг, SSE-прогресс, S3-хранение результатов.
 
 ## За 30 секунд
 
 ```bash
-# 1. Получите ключ в дашборде https://gateway.neuroartist.ru → Settings → API Keys
-
-# 2. Сгенерируйте картинку
 curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
@@ -24,30 +20,72 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 { "images": [{ "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }], "seed": 12345 }
 ```
 
-Это всё, что нужно для production использования. Ниже — задачи посложнее.
-
-## Куда дальше
+## С чего начать
 
 import { Cards } from 'nextra/components'
 
 <Cards num={2}>
-  <Cards.Card title="Quickstart" href="/quickstart" arrow>
-    Регистрация → ключ → первый запрос. 60 секунд.
+  <Cards.Card title="Quickstart" href="/get-started/quickstart" arrow>
+    Регистрация → API-ключ → первый запрос. 60 секунд.
   </Cards.Card>
-  <Cards.Card title="Cheatsheet" href="/cheatsheet" arrow>
-    Все ручки на одной странице. Для беглого взгляда и AI-агентов.
+  <Cards.Card title="Аутентификация" href="/get-started/authentication" arrow>
+    Session или API-ключ. Когда что использовать.
   </Cards.Card>
-  <Cards.Card title="Async + SSE" href="/guides/async-generation" arrow>
-    Submit → стрим прогресса → результат. Для долгих генераций.
+</Cards>
+
+## Что генерировать
+
+<Cards num={3}>
+  <Cards.Card title="Изображения" href="/generate/images" arrow>
+    text-to-image, image-to-image, inpainting
   </Cards.Card>
-  <Cards.Card title="Webhooks" href="/guides/webhook-receiver" arrow>
-    Готовый код приёмника на Hono / Next / Express / FastAPI.
+  <Cards.Card title="Видео" href="/generate/video" arrow>
+    text-to-video, image-to-video, длительные задачи
   </Cards.Card>
-  <Cards.Card title="Биллинг" href="/concepts/billing" arrow>
-    Кредиты, top-up, авто-пополнение, чеки.
+  <Cards.Card title="Аудио" href="/generate/audio" arrow>
+    TTS, voice-cloning, music
   </Cards.Card>
-  <Cards.Card title="Все эндпоинты" href="/api/overview" arrow>
-    Полный reference со схемами и кодами ошибок.
+</Cards>
+
+## Как интегрировать
+
+<Cards num={2}>
+  <Cards.Card title="Sync — POST /run" href="/build/sync" arrow>
+    Один запрос — один результат. До 5 минут.
+  </Cards.Card>
+  <Cards.Card title="Async + SSE" href="/build/async" arrow>
+    Submit → стрим прогресса → результат.
+  </Cards.Card>
+  <Cards.Card title="Webhooks" href="/build/webhooks" arrow>
+    Подписанные callbacks. Готовый код приёмника.
+  </Cards.Card>
+  <Cards.Card title="Загрузка input-файлов" href="/build/upload-inputs" arrow>
+    Для img2img, video2video, voice-clone.
+  </Cards.Card>
+</Cards>
+
+## Управление аккаунтом
+
+<Cards num={2}>
+  <Cards.Card title="Биллинг и кредиты" href="/manage/billing" arrow>
+    Top-up YooKassa, чеки, refund при сбое.
+  </Cards.Card>
+  <Cards.Card title="Авто-пополнение" href="/manage/auto-topup" arrow>
+    Auto-charge при просадке баланса.
+  </Cards.Card>
+</Cards>
+
+## Reference
+
+<Cards num={3}>
+  <Cards.Card title="Cheatsheet" href="/reference/cheatsheet" arrow>
+    Все эндпоинты на одной странице.
+  </Cards.Card>
+  <Cards.Card title="API endpoints" href="/reference/api" arrow>
+    Полный справочник со схемами.
+  </Cards.Card>
+  <Cards.Card title="Errors" href="/reference/errors" arrow>
+    Коды ошибок и логика ветвления.
   </Cards.Card>
 </Cards>
 
@@ -61,6 +99,7 @@ Local dev    http://localhost:8000
 
 ## Для AI-агентов
 
-`/llms.txt` — компактный markdown со всей документацией для контекста LLM.
+`/llms.txt` — компактный markdown с ключевыми разделами для контекста LLM.
+`/llms-full.txt` — все страницы документации.
 
-OpenAPI 3.1 в production: [`api.neuroartist.ru/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU). Interactive playground — [`/docs`](https://api.neuroartist.ru/docs).
+OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU).

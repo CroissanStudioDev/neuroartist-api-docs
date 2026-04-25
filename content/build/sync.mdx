@@ -111,7 +111,7 @@ curl https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/progress/
   -H "Authorization: Bearer na_live_xxxx"
 ```
 
-→ [Guide: async + SSE](/guides/async-generation).
+→ [Guide: async + SSE](/build/async).
 
 ## Обработка ошибок
 
@@ -129,7 +129,7 @@ try {
 }
 ```
 
-Полный список — [Errors](/concepts/errors).
+Полный список — [Errors](/reference/errors).
 
 ## Estimate перед запуском
 
@@ -145,6 +145,6 @@ curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
 
 | Признак | Решение |
 | --- | --- |
-| Часто > 60 сек | [/queue + SSE](/guides/async-generation) |
+| Часто > 60 сек | [/queue + SSE](/build/async) |
 | Reverse-proxy режет соединения | Webhook |
 | Хотите параллельные запросы | `/queue` |
