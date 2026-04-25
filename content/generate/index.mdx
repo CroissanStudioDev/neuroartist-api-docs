@@ -1,0 +1,53 @@
+---
+title: Обзор каталога
+description: Как устроен каталог моделей и как его читать
+---
+
+# Каталог моделей
+
+Все модели — изображения, видео, аудио — лежат в одном каталоге. Каталог автоматически синхронизируется с провайдерами (fal.ai и др.), пересобирается при добавлении новых моделей и обновлении цен. Вам не нужно отдельно подключать модель — достаточно знать её `modelId`.
+
+## Откуда берутся модели
+
+```
+Провайдер (fal.ai)  →  syncCatalog()  →  каталог  →  GET /models
+                       syncPricing()                  GET /models/{modelId}
+```
+
+Каждая модель в каталоге имеет:
+
+- **публичный `modelId`** (alias) — то, что вы передаёте в `POST /run/{modelId}` или `POST /queue/{modelId}`. Без префикса провайдера: `flux/dev`, не `fal-ai/flux/dev`.
+- **категорию**: `text-to-image`, `image-to-image`, `text-to-video`, `image-to-video`, `text-to-speech`, `speech-to-text`, …
+- **`modelLab`** — производителя: «Black Forest Labs», «Google», «Kling», «ElevenLabs», …
+- **JSON Schema input-а** (поле `schema`) — точные поля, которые принимает модель, с типами, enum-ами и default-ами.
+- **цену** в `priceRub` (за единицу — image, second, megapixel) и `creditCost` (фиксированный целочисленный cost списания).
+- **тэги** для поиска: `realism`, `lora`, `nsfw-safe`, `multilingual`, …
+
+## Что искать дальше
+
+import { Cards } from 'nextra/components'
+
+<Cards num={2}>
+  <Cards.Card title="Поиск по каталогу" href="/generate/search" arrow>
+    `GET /models` с фильтрами по категории, производителю, тэгам, цене.
+  </Cards.Card>
+  <Cards.Card title="Схема модели" href="/generate/schema" arrow>
+    Поля объекта Model, формат JSON Schema input-а, как читать `pricingConfig`.
+  </Cards.Card>
+  <Cards.Card title="Изображения" href="/generate/images" arrow>
+    text-to-image, image-to-image, популярные модели, примеры запросов.
+  </Cards.Card>
+  <Cards.Card title="Видео" href="/generate/video" arrow>
+    text-to-video, image-to-video, длительные генерации.
+  </Cards.Card>
+  <Cards.Card title="Аудио" href="/generate/audio" arrow>
+    TTS, voice-cloning, распознавание речи.
+  </Cards.Card>
+</Cards>
+
+## Принципы каталога
+
+- **Сначала видимые с ценой.** Публичный `GET /models` отдаёт только модели с `visible=true` и синхронизированной ценой. Только что добавленные модели появятся в каталоге, как только провайдер опубликует их прайс.
+- **Стабильный modelId.** Alias не меняется. Если провайдер переименовывает модель — мы добавим новый alias, а старый какое-то время остаётся работающим redirect-ом.
+- **Цены динамические.** `priceRub` — последний синхронизированный прайс провайдера (за минусом скидок), `creditCost` — целочисленное списание для биллинга. Подробнее — [схема модели](/generate/schema#цена).
+- **Скрытые модели.** Поле `visible=false` означает что модель в админке, но недоступна через публичный API. Полезно для постепенного rollout-а.

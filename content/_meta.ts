@@ -2,7 +2,7 @@ export default {
   index: 'Введение',
   quickstart: 'Быстрый старт',
   authentication: 'Аутентификация',
-  generate: 'Модели',
+  generate: 'Каталог моделей',
   build: 'Запросы',
   billing: 'Биллинг',
   errors: 'Коды ошибок',

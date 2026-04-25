@@ -1,0 +1,156 @@
+---
+title: Схема модели
+description: Поля Model и как читать JSON Schema input-а
+---
+
+# Схема модели
+
+`GET /models/{modelId}` возвращает полную карточку модели. Это источник правды о том, какие параметры модель принимает, во сколько обойдётся вызов и что за ней стоит.
+
+## Пример
+
+```bash
+curl https://api.neuroartist.ru/models/flux/dev
+```
+
+```json
+{
+  "modelId": "flux/dev",
+  "displayName": "FLUX.1 [dev]",
+  "category": "text-to-image",
+  "description": "Open-weights 12B rectified flow transformer for fast, high-quality image generation.",
+  "creditCost": 8,
+  "discountPercent": 0,
+  "originalPriceRub": 8.0,
+  "priceRub": 8.0,
+  "priceUnit": "image",
+  "modelLab": "Black Forest Labs",
+  "modelFamily": "FLUX",
+  "groupLabel": "FLUX.1",
+  "tags": ["realism", "fast"],
+  "thumbnailUrl": "https://s3.cloud.ru/neuroartist/thumbnails/flux-dev.webp",
+  "publishedAt": "2026-03-12T00:00:00Z",
+  "licenseType": "non-commercial",
+  "schema": { "input": { … }, "output": { … } },
+  "schemaRu": { "input": { … } },
+  "schemaFetchedAt": "2026-04-25T08:14:03Z",
+  "createdAt": "2026-03-12T00:00:00Z",
+  "updatedAt": "2026-04-25T08:14:03Z"
+}
+```
+
+## Поля
+
+### Идентификация
+
+| Поле | Описание |
+| --- | --- |
+| `modelId` | Публичный alias. Используется в `POST /run/{modelId}` и `POST /queue/{modelId}`. Не меняется. |
+| `displayName` | Человекочитаемое имя для UI. |
+| `category` | Тип задачи — `text-to-image`, `image-to-image`, `text-to-video`, `image-to-video`, `text-to-speech`, `speech-to-text`, `text-to-audio`, … |
+| `modelLab` | Производитель: `Black Forest Labs`, `Google`, `Kling`, `ElevenLabs`. `null` для community-моделей. |
+| `modelFamily` | Семейство (`FLUX`, `Stable Diffusion`, `Kling Video`). |
+| `groupLabel` | Label для группировки в каталоге UI. |
+| `tags` | Массив строк: `realism`, `lora`, `multilingual`, `nsfw-safe`, … Используются для поиска. |
+
+### Цена
+
+| Поле | Описание |
+| --- | --- |
+| `creditCost` | **Целое число кредитов**, которое будет списано атомарно при submit. Источник правды для биллинга. |
+| `priceRub` | Текущая цена за единицу в рублях (decimal). Например `8.0` за image, `0.05` за megapixel, `12.0` за 5 секунд видео. |
+| `priceUnit` | Единица для `priceRub`: `image`, `second`, `megapixel`, `request`, `1k_chars`. |
+| `originalPriceRub` | Цена до скидки (если `discountPercent > 0`). |
+| `discountPercent` | Процент скидки (0–100). |
+
+`creditCost` — это **верхняя граница** списания. Для моделей с динамической ценой (per-second video, per-megapixel image) реальное списание уточняется после генерации (reconciliation). См. [Биллинг](/billing#жизненный-цикл-денег).
+
+Точный расчёт перед запуском — `POST /models/{modelId}/estimate` с input-ом конкретного запроса.
+
+### Schema input-а
+
+Поле `schema` — это **JSON Schema** того, что вы передаёте в теле `POST /run/{modelId}`:
+
+```json
+{
+  "schema": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Text description of the desired image",
+          "minLength": 1
+        },
+        "image_size": {
+          "type": "string",
+          "enum": ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
+          "default": "square_hd"
+        },
+        "num_inference_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 28
+        },
+        "guidance_scale": {
+          "type": "number",
+          "default": 3.5
+        },
+        "num_images": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1
+        }
+      },
+      "required": ["prompt"]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "images": { "type": "array", "items": { … } },
+        "seed": { "type": "integer" }
+      }
+    }
+  }
+}
+```
+
+Поле `schemaRu` — RU-overlay поверх английских `title` и `description` для UI playground в дашборде. Структура та же.
+
+`schemaFetchedAt` — когда мы последний раз тянули schema у провайдера. Если `null` — schema подгружается лениво при первом обращении к `GET /models/{modelId}`.
+
+### Метаданные
+
+| Поле | Описание |
+| --- | --- |
+| `description` | Краткое описание (1–2 предложения) — что умеет, на чём натренирована. |
+| `thumbnailUrl` | URL preview-картинки для UI. |
+| `licenseType` | Лицензия модели: `commercial`, `non-commercial`, `open-source`. Влияет на разрешённые use-cases. |
+| `publishedAt` | Когда модель опубликована провайдером. |
+| `createdAt`, `updatedAt` | Когда добавлена / обновлена в нашем каталоге. |
+
+## Использовать schema программно
+
+Schema — обычный JSON Schema, можно подсунуть в любой validator (`ajv`, `zod`, `pydantic`):
+
+```js
+import Ajv from 'ajv'
+
+const model = await fetch('https://api.neuroartist.ru/models/flux/dev').then(r => r.json())
+const ajv = new Ajv()
+const validate = ajv.compile(model.schema.input)
+
+const input = { prompt: 'hello', num_inference_steps: 100 }
+if (!validate(input)) console.error(validate.errors)
+// → maximum: должно быть ≤ 50
+```
+
+Это полезно, чтобы клиент валидировал input до отправки и не тратил круги до 400 от сервера.
+
+## Дальше
+
+- [Поиск по каталогу](/generate/search) — фильтры и сортировка списка моделей.
+- [Оценка стоимости](/billing#оценка-стоимости-перед-запуском) — `POST /models/{modelId}/estimate` с реальным input-ом.
+- [Изображения](/generate/images), [видео](/generate/video), [аудио](/generate/audio) — типовые рецепты по медиа.

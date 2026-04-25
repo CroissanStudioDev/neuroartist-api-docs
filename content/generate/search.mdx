@@ -1,0 +1,125 @@
+---
+title: Поиск по каталогу
+description: GET /models с фильтрами по категории, производителю, тэгам, цене
+---
+
+# Поиск по каталогу
+
+Один эндпоинт со всеми фильтрами:
+
+```
+GET /models?category=…&lab=…&tag=…&search=…&sort=…&limit=…&offset=…
+```
+
+Аутентификация не нужна — каталог публичный.
+
+## Минимальный пример
+
+```bash
+curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=popular&limit=10'
+```
+
+```json
+{
+  "items": [
+    {
+      "modelId": "flux/dev",
+      "displayName": "FLUX.1 [dev]",
+      "category": "text-to-image",
+      "modelLab": "Black Forest Labs",
+      "tags": ["realism", "fast"],
+      "priceRub": 8.0,
+      "priceUnit": "image",
+      "creditCost": 8,
+      "thumbnailUrl": "https://…",
+      "publishedAt": "2026-03-12T00:00:00Z"
+    }
+    // …
+  ],
+  "total": 142,
+  "limit": 10,
+  "offset": 0
+}
+```
+
+## Параметры
+
+| Параметр | Тип | Описание |
+| --- | --- | --- |
+| `category` | string (CSV) | Одна или несколько категорий через запятую: `text-to-image,image-to-image`. SQL `IN (...)`. |
+| `lab` | string (CSV) | Производитель: `Google,Black Forest Labs,Kling,ElevenLabs`. |
+| `tag` | string (CSV) | Тэги: `realism,lora`. **AND-семантика** — модель должна нести **все** перечисленные тэги. |
+| `search` | string | Подстрочный поиск (case-insensitive) по `modelId`, `displayName`, `description`. До 64 символов. |
+| `sort` | enum | `popular` (default), `newest`, `price_asc`, `by_category` — см. ниже. |
+| `includeCommunity` | bool | По умолчанию `false`. Передайте `true` чтобы включить unbranded / community-LoRA модели (`modelLab=null`). |
+| `limit` | int | 1–200, по умолчанию 50. |
+| `offset` | int | Сдвиг для пагинации, по умолчанию 0. |
+
+## Стратегии сортировки
+
+- **`popular`** (default) — сначала по `providerRank` (популярность у провайдера), потом по `publishedAt DESC`. Это «человеческий» порядок для UI listing.
+- **`newest`** — последние опубликованные модели сверху. Для feed-страницы «что нового».
+- **`price_asc`** — самые дешёвые сверху. Модели без цены идут в конец.
+- **`by_category`** — фиксированный порядок категорий (`text-to-image`, `image-to-image`, `text-to-video`, …) → внутри каждой `providerRank` → `publishedAt`. Для каталога с секциями.
+
+## Категории
+
+| Значение | Что |
+| --- | --- |
+| `text-to-image` | Генерация картинки из текста |
+| `image-to-image` | Преобразование картинки (img2img, inpainting, upscale) |
+| `text-to-video` | Видео из текста |
+| `image-to-video` | Анимация из ключевого кадра |
+| `text-to-speech` | TTS |
+| `speech-to-text` | Распознавание речи |
+| `text-to-audio` | Музыка / звуковой дизайн из текста |
+| `voice-cloning` | Клонирование голоса по reference-сэмплу |
+| `embedding` | Векторизация (текст / image) |
+
+Список не исчерпывающий — при добавлении нового типа моделей категория появится в каталоге автоматически.
+
+## Примеры
+
+### Все модели Google
+
+```bash
+curl 'https://api.neuroartist.ru/models?lab=Google&limit=100'
+```
+
+### Дешёвые text-to-image
+
+```bash
+curl 'https://api.neuroartist.ru/models?category=text-to-image&sort=price_asc&limit=20'
+```
+
+### Photorealism + быстрые
+
+```bash
+curl 'https://api.neuroartist.ru/models?tag=realism,fast&category=text-to-image'
+```
+
+### Поиск по имени
+
+```bash
+curl 'https://api.neuroartist.ru/models?search=banana'
+```
+
+### Каталог для UI с секциями
+
+```bash
+curl 'https://api.neuroartist.ru/models?sort=by_category&limit=200'
+```
+
+## Получить детали одной модели
+
+```bash
+curl https://api.neuroartist.ru/models/flux/dev
+```
+
+Ответ — полная карточка модели с `schema` (JSON Schema input-а), `priceRub`, `creditCost`, тэгами и метаданными. Подробное описание полей — [схема модели](/generate/schema).
+
+## Дальше
+
+- [Схема модели](/generate/schema) — что значат поля карточки и как читать `schema`.
+- [Изображения](/generate/images), [видео](/generate/video), [аудио](/generate/audio) — типичные модели по типу медиа.
+- [Оценка стоимости](/billing#оценка-стоимости-перед-запуском) — `POST /models/{modelId}/estimate`.
