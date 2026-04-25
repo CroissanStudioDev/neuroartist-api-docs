@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Golos_Text } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { Footer, LastUpdated, Layout, Navbar } from 'nextra-theme-docs'
-import { Head, Search } from 'nextra/components'
+import { Banner, Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
@@ -34,6 +34,12 @@ export const metadata: Metadata = {
     'Один HTTPS-эндпоинт к генеративным моделям с кредитным биллингом и SSE-прогрессом. API-ключ, async-очередь, webhooks, OpenAPI 3.1.'
 }
 
+const banner = (
+  <Banner storageKey="na-welcome-bonus" dismissible>
+    Welcome-бонус 50 ₽ при регистрации — около шести image-генераций бесплатно.
+  </Banner>
+)
+
 const navbar = (
   <Navbar
     logo={
@@ -41,10 +47,41 @@ const navbar = (
         Neuroartist <span style={{ opacity: 0.55 }}>API Gateway</span>
       </span>
     }
-  />
+  >
+    <a
+      href="https://gateway.neuroartist.ru"
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        fontSize: '0.9375rem',
+        fontWeight: 500,
+        padding: '0.375rem 0.625rem',
+        borderRadius: 6
+      }}
+    >
+      Дашборд ↗
+    </a>
+    <a
+      href="https://api.neuroartist.ru/docs"
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        fontSize: '0.9375rem',
+        fontWeight: 500,
+        padding: '0.375rem 0.625rem',
+        borderRadius: 6
+      }}
+    >
+      API Console ↗
+    </a>
+  </Navbar>
 )
 
-const footer = <Footer>{new Date().getFullYear()} © Neuroartist.</Footer>
+const footer = (
+  <Footer>
+    <span style={{ opacity: 0.6 }}>{new Date().getFullYear()} © Neuroartist.</span>
+  </Footer>
+)
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -57,6 +94,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <Head />
       <body>
         <Layout
+          banner={banner}
           navbar={navbar}
           pageMap={await getPageMap()}
           footer={footer}

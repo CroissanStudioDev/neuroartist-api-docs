@@ -1,54 +1,80 @@
 ---
 title: Введение
-description: Один HTTPS-эндпоинт к генеративным моделям с кредитным биллингом и SSE-прогрессом
+description: Один HTTPS-эндпоинт ко всем генеративным моделям. Кредиты в рублях, SSE-прогресс, S3-хранение результатов.
 ---
 
-# Neuroartist API Gateway
+import { Cards } from 'nextra/components'
 
-Один HTTPS-эндпоинт к генеративным моделям image / video / audio. API-ключ, кредитный биллинг, SSE-прогресс, S3-хранение результатов.
+<div className="na-hero">
 
-## За 30 секунд
+<span className="na-hero-eyebrow">Neuroartist API Gateway</span>
 
-```bash
+<div className="na-hero-grid">
+<div>
+
+<h1 className="na-hero-title">
+Один API ко всем<br/>
+<span className="na-hero-title-accent">генеративным моделям</span>
+</h1>
+
+<div className="na-hero-subtitle">
+text-to-image, video, audio. API-ключ, кредиты в рублях, SSE-прогресс, S3-хранение результатов. Без VPN.
+</div>
+
+<div className="na-cta-row">
+  <a href="/get-started/quickstart" className="na-cta-primary">Быстрый старт →</a>
+  <a href="/generate/images" className="na-cta-secondary">Сгенерировать изображение</a>
+</div>
+
+<div className="na-bullets">
+  <div>Welcome-бонус 50 ₽ на старте — около шести image-генераций бесплатно.</div>
+  <div>OpenAPI 3.1, RU и EN, плюс <code>/llms.txt</code> для AI-агентов.</div>
+  <div>YooKassa-биллинг, чеки 54-ФЗ, авто-пополнение по порогу.</div>
+</div>
+
+</div>
+
+<div className="na-hero-code">
+
+```bash filename="Запрос"
 curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"editorial portrait, monochrome","image_size":"portrait_4_3"}'
+  -d '{
+    "prompt": "editorial portrait, monochrome",
+    "image_size": "portrait_4_3"
+  }'
 ```
 
-```json
+```json filename="Ответ"
 {
   "images": [
-    { "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }
+    {
+      "url": "https://s3.cloud.ru/.../result.webp",
+      "width": 768,
+      "height": 1024
+    }
   ],
   "seed": 12345
 }
 ```
 
-## С чего начать
+</div>
+</div>
 
-import { Cards } from 'nextra/components'
+</div>
 
-<Cards num={2}>
-  <Cards.Card title="Быстрый старт" href="/get-started/quickstart" arrow>
-    Регистрация, API-ключ, первый запрос. 60 секунд.
-  </Cards.Card>
-  <Cards.Card title="Аутентификация" href="/get-started/authentication" arrow>
-    Сессия или API-ключ. Когда что использовать.
-  </Cards.Card>
-</Cards>
+## Что доступно
 
-## Что генерировать
-
-<Cards num={2}>
+<Cards num={3}>
   <Cards.Card title="Изображения" href="/generate/images" arrow>
-    text-to-image, image-to-image, inpainting
+    text-to-image, image-to-image, FLUX / Recraft / Stable Diffusion
   </Cards.Card>
   <Cards.Card title="Видео" href="/generate/video" arrow>
-    text-to-video, image-to-video
+    text-to-video, image-to-video, Kling / Runway / Wan
   </Cards.Card>
   <Cards.Card title="Аудио" href="/generate/audio" arrow>
-    TTS, voice-cloning, музыка
+    TTS, voice-cloning, music, ElevenLabs / Whisper
   </Cards.Card>
 </Cards>
 
@@ -56,55 +82,55 @@ import { Cards } from 'nextra/components'
 
 <Cards num={2}>
   <Cards.Card title="Синхронный запрос" href="/build/sync" arrow>
-    POST /run — один запрос, один результат, до 5 минут.
+    `POST /run` — один HTTP-вызов, один ответ, до 5 минут.
   </Cards.Card>
-  <Cards.Card title="Асинхронно с прогрессом" href="/build/async" arrow>
-    POST /queue + SSE — для длинных генераций.
+  <Cards.Card title="Асинхронно с SSE" href="/build/async" arrow>
+    `POST /queue` + Server-Sent Events для длинных генераций.
   </Cards.Card>
-  <Cards.Card title="Webhook" href="/build/webhooks" arrow>
-    Подписанные callbacks. Готовый код приёмника.
+  <Cards.Card title="Webhook-приёмник" href="/build/webhooks" arrow>
+    Подписанный callback. Готовый код для Hono / Express / FastAPI.
   </Cards.Card>
-  <Cards.Card title="Загрузка входных файлов" href="/build/upload-inputs" arrow>
-    Для img2img, video2video, voice-clone.
+  <Cards.Card title="Загрузка файлов" href="/build/upload-inputs" arrow>
+    multipart/form-data → asset URL для img2img, video2video.
   </Cards.Card>
 </Cards>
 
-## Управление аккаунтом
+## Аккаунт и оплата
 
 <Cards num={2}>
   <Cards.Card title="Биллинг и кредиты" href="/manage/billing" arrow>
-    Пополнение через YooKassa, чеки, refund при сбое.
+    Top-up через YooKassa, чеки 54-ФЗ, refund при сбое.
   </Cards.Card>
   <Cards.Card title="Авто-пополнение" href="/manage/auto-topup" arrow>
-    Автоматическое пополнение баланса при просадке.
+    Списание с сохранённой карты при просадке баланса.
   </Cards.Card>
 </Cards>
 
 ## Справочник
 
-<Cards num={2}>
+<Cards num={3}>
   <Cards.Card title="Шпаргалка по API" href="/reference/cheatsheet" arrow>
-    Все эндпоинты на одной странице.
+    Все публичные эндпоинты на одной странице.
   </Cards.Card>
-  <Cards.Card title="Справочник эндпоинтов" href="/reference/api" arrow>
+  <Cards.Card title="Эндпоинты" href="/reference/api" arrow>
     Полное описание со схемами тел и ответов.
   </Cards.Card>
   <Cards.Card title="Коды ошибок" href="/reference/errors" arrow>
-    Машинно-читаемые коды и логика ветвления.
+    Стабильные машинные коды и логика ветвления.
   </Cards.Card>
 </Cards>
 
 ## Базовые URL
 
 ```
-Боевой      https://api.neuroartist.ru
-Staging     https://staging.neuroartist.ru
-Локально    http://localhost:8000
+Production    https://api.neuroartist.ru
+Staging       https://staging.neuroartist.ru
+Локально      http://localhost:8000
 ```
 
 ## Для AI-агентов
 
-`/llms.txt` — компактный markdown с ключевыми разделами для контекста LLM.
-`/llms-full.txt` — все страницы документации.
+`/llms.txt` — компактный markdown-конспект с ключевыми фактами для контекста LLM.
+`/llms-full.txt` — полная документация одним файлом.
 
-OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU).
+OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU). Интерактивный playground — [`/docs`](https://api.neuroartist.ru/docs).
