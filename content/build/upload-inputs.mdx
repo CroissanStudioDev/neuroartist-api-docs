@@ -5,7 +5,7 @@ description: Загрузка файла для img2img / video2video / voice-cl
 
 # Загрузка входных файлов
 
-Многие модели принимают `image_url` / `video_url` / `audio_url`. Чтобы передать свой файл — сначала загрузите его в gateway.
+Многие модели принимают `image_url` / `video_url` / `audio_url`. Чтобы передать свой файл — сначала загрузите его в наш сервис.
 
 ```
 POST /me/uploads
@@ -79,7 +79,7 @@ const { url } = await upload(document.querySelector('input[type=file]').files[0]
 
 ## Альтернатива — внешний URL
 
-Если у вас уже есть публичный URL с CORS — можно сразу подсунуть в input модели **без** загрузки в gateway:
+Если у вас уже есть публичный URL с CORS — можно сразу подсунуть в input модели **без** загрузки в наш сервис:
 
 ```json
 { "image_url": "https://your-cdn.example.com/photo.jpg", "prompt": "…" }

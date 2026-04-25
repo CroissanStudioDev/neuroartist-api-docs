@@ -46,7 +46,7 @@ export async function GET() {
   )
 
   const body = [
-    '# Neuroartist API Gateway — полная документация',
+    '# Neuroartist API — полная документация',
     '',
     'Один HTTPS-эндпоинт к генеративным моделям (image / video / audio).',
     'API-ключ, кредитный биллинг, SSE-прогресс, S3-хранение результатов.',

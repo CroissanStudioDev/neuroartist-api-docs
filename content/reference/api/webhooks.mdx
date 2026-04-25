@@ -8,7 +8,7 @@ import { Callout } from 'nextra/components'
 # `/webhooks`
 
 <Callout type="info">
-  Это **входящие** webhooks — server-to-server, между upstream-ами и gateway. Клиентский код к ним обращаться не должен. Если вы интегрируете SDK / приложение, см. [формат webhooks](/reference/webhooks) — там про **исходящие** webhooks gateway → ваш сервис.
+  Это **входящие** webhooks — server-to-server, между upstream-ами и сервисом. Клиентский код к ним обращаться не должен. Если вы интегрируете SDK / приложение, см. [формат webhooks](/reference/webhooks) — там про **исходящие** webhooks сервис → ваш приёмник.
 </Callout>
 
 ## `POST /webhooks/{providerId}`
@@ -86,6 +86,6 @@ Webhook от YooKassa о состоянии платежа.
 
 ## Дальше
 
-- [Формат webhooks](/reference/webhooks) — исходящие callbacks gateway → ваш сервис.
+- [Формат webhooks](/reference/webhooks) — исходящие callbacks сервис → ваш приёмник.
 - [Приём webhook](/build/webhooks) — код вашего endpoint-а.
 - [Биллинг](/reference/api/billing) — платежи, которые завершает YooKassa webhook.

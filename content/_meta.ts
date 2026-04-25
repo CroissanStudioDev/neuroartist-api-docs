@@ -1,8 +1,5 @@
 export default {
-  index: {
-    title: 'Введение',
-    theme: { layout: 'full', toc: false, breadcrumb: false }
-  },
+  index: 'Введение',
   '-- learn': { type: 'separator', title: 'Обучение' },
   'get-started': 'Начало работы',
   generate: 'Что генерировать',

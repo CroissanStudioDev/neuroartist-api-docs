@@ -87,7 +87,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   -d '{"prompt":"…"}'
 ```
 
-После terminal-стадии gateway POST-ит подписанный JSON на ваш URL. → [готовый приёмник webhook](/build/webhooks).
+После terminal-стадии сервис POST-ит подписанный JSON на ваш URL. → [готовый приёмник webhook](/build/webhooks).
 
 ## Параллельные запросы
 
@@ -104,7 +104,7 @@ const results = await Promise.all(ids.map(waitForCompletion))
 
 ## Подключение после завершения
 
-Можно подключиться к `progress/stream` **после** terminal-стадии — gateway отдаст последнее событие и закроет стрим. Удобно для UI после refresh с сохранённым `requestId`.
+Можно подключиться к `progress/stream` **после** terminal-стадии — сервис отдаст последнее событие и закроет стрим. Удобно для UI после refresh с сохранённым `requestId`.
 
 ## Гибридный паттерн для production
 

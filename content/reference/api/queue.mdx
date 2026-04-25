@@ -84,7 +84,7 @@ data: {"status":"COMPLETED","request_id":"req_abc"}
 
 ## `GET /queue/{modelId}/requests/{requestId}/progress/stream`
 
-Унифицированный SSE — lifecycle gateway-а.
+Унифицированный SSE — lifecycle API.
 
 ```
 data: {"stage":"queued","requestId":"req_abc","timestamp":"…"}
@@ -155,7 +155,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   ...
 ```
 
-После terminal-состояния gateway POST-ит JSON на ваш URL. Подробнее — [формат webhooks](/reference/webhooks).
+После terminal-состояния сервис POST-ит JSON на ваш URL. Подробнее — [формат webhooks](/reference/webhooks).
 
 ## Дальше
 

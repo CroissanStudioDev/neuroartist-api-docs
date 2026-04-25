@@ -34,7 +34,7 @@ Liveness + проверка БД.
 
 `status` ∈ {`ok`, `degraded`}. `db` ∈ {`up`, `down`}.
 
-200 даже при `db: down` — gateway сам жив. Используйте поле `db` для k8s readiness вместо HTTP-кода.
+200 даже при `db: down` — сервис жив. Используйте поле `db` для k8s readiness вместо HTTP-кода.
 
 ## `GET /metrics`
 

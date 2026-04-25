@@ -21,7 +21,7 @@ balance < thresholdRub  →  charge amountRub с default-карты  →  webhoo
 
 ### Сохраните карту
 
-Единственный способ получить `payment_method_id` — заплатить хотя бы один раз через [`POST /billing/topup`](/manage/billing#пополнение-баланса). YooKassa вернёт его в payment-объекте, gateway сохранит в `payment_method`.
+Единственный способ получить `payment_method_id` — заплатить хотя бы один раз через [`POST /billing/topup`](/manage/billing#пополнение-баланса). YooKassa вернёт его в payment-объекте, сервис сохранит в `payment_method`.
 
 ### Сделайте карту default
 

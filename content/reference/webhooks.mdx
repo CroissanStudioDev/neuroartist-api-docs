@@ -1,6 +1,6 @@
 ---
 title: Формат webhooks
-description: Подписанные callbacks от gateway → ваш сервис
+description: Подписанные callbacks от сервис → ваш приёмник
 ---
 
 # Формат webhooks
@@ -119,7 +119,7 @@ if (seen === null) return res.status(200).end()
 
 ## Внутренние webhooks (НЕ для вас)
 
-`/webhooks/{providerId}` и `/webhooks/yookassa/notify` — это **входящие** server-to-server endpoints между gateway и upstream-ами (fal.ai, YooKassa). В клиентский код к ним обращаться не нужно.
+`/webhooks/{providerId}` и `/webhooks/yookassa/notify` — это **входящие** server-to-server endpoints между сервисом и upstream-ами (fal.ai, YooKassa). В клиентский код к ним обращаться не нужно.
 
 ## Дальше
 

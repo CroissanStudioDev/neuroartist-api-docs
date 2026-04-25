@@ -1,136 +1,47 @@
 ---
 title: Введение
-description: Один HTTPS-эндпоинт ко всем генеративным моделям. Кредиты в рублях, SSE-прогресс, S3-хранение результатов.
+description: REST API для генерации изображений, видео и аудио в вашем продукте.
 ---
 
-import { Cards } from 'nextra/components'
+# Neuroartist API
 
-<div className="na-hero">
+REST API для генерации **изображений, видео и аудио** в вашем приложении. 1300+ моделей: FLUX, Stable Diffusion, Kling, Runway, ElevenLabs, Whisper. Оплата в рублях через YooKassa, без VPN, welcome-бонус 50 ₽ при регистрации.
 
-<span className="na-hero-eyebrow">Neuroartist API Gateway</span>
+## Минимальный пример
 
-<div className="na-hero-grid">
-<div>
-
-<h1 className="na-hero-title">
-Один API ко всем<br/>
-<span className="na-hero-title-accent">генеративным моделям</span>
-</h1>
-
-<div className="na-hero-subtitle">
-text-to-image, video, audio. API-ключ, кредиты в рублях, SSE-прогресс, S3-хранение результатов. Без VPN.
-</div>
-
-<div className="na-cta-row">
-  <a href="/get-started/quickstart" className="na-cta-primary">Быстрый старт →</a>
-  <a href="/generate/images" className="na-cta-secondary">Сгенерировать изображение</a>
-</div>
-
-<div className="na-bullets">
-  <div>Welcome-бонус 50 ₽ на старте — около шести image-генераций бесплатно.</div>
-  <div>OpenAPI 3.1, RU и EN, плюс <code>/llms.txt</code> для AI-агентов.</div>
-  <div>YooKassa-биллинг, чеки 54-ФЗ, авто-пополнение по порогу.</div>
-</div>
-
-</div>
-
-<div className="na-hero-code">
-
-```bash filename="Запрос"
+```bash
 curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "editorial portrait, monochrome",
-    "image_size": "portrait_4_3"
-  }'
+  -d '{"prompt":"editorial portrait, monochrome"}'
 ```
 
-```json filename="Ответ"
+```json
 {
   "images": [
-    {
-      "url": "https://s3.cloud.ru/.../result.webp",
-      "width": 768,
-      "height": 1024
-    }
+    { "url": "https://s3.cloud.ru/.../result.webp", "width": 768, "height": 1024 }
   ],
   "seed": 12345
 }
 ```
 
-</div>
-</div>
+URL ведёт в наш S3 — ссылка не протухает, скачивайте напрямую в свой проект.
 
-</div>
+## Что дальше
 
-## Что доступно
-
-<Cards num={3}>
-  <Cards.Card title="Изображения" href="/generate/images" arrow>
-    text-to-image, image-to-image, FLUX / Recraft / Stable Diffusion
-  </Cards.Card>
-  <Cards.Card title="Видео" href="/generate/video" arrow>
-    text-to-video, image-to-video, Kling / Runway / Wan
-  </Cards.Card>
-  <Cards.Card title="Аудио" href="/generate/audio" arrow>
-    TTS, voice-cloning, music, ElevenLabs / Whisper
-  </Cards.Card>
-</Cards>
-
-## Как интегрировать
-
-<Cards num={2}>
-  <Cards.Card title="Синхронный запрос" href="/build/sync" arrow>
-    `POST /run` — один HTTP-вызов, один ответ, до 5 минут.
-  </Cards.Card>
-  <Cards.Card title="Асинхронно с SSE" href="/build/async" arrow>
-    `POST /queue` + Server-Sent Events для длинных генераций.
-  </Cards.Card>
-  <Cards.Card title="Webhook-приёмник" href="/build/webhooks" arrow>
-    Подписанный callback. Готовый код для Hono / Express / FastAPI.
-  </Cards.Card>
-  <Cards.Card title="Загрузка файлов" href="/build/upload-inputs" arrow>
-    multipart/form-data → asset URL для img2img, video2video.
-  </Cards.Card>
-</Cards>
-
-## Аккаунт и оплата
-
-<Cards num={2}>
-  <Cards.Card title="Биллинг и кредиты" href="/manage/billing" arrow>
-    Top-up через YooKassa, чеки 54-ФЗ, refund при сбое.
-  </Cards.Card>
-  <Cards.Card title="Авто-пополнение" href="/manage/auto-topup" arrow>
-    Списание с сохранённой карты при просадке баланса.
-  </Cards.Card>
-</Cards>
-
-## Справочник
-
-<Cards num={3}>
-  <Cards.Card title="Шпаргалка по API" href="/reference/cheatsheet" arrow>
-    Все публичные эндпоинты на одной странице.
-  </Cards.Card>
-  <Cards.Card title="Эндпоинты" href="/reference/api" arrow>
-    Полное описание со схемами тел и ответов.
-  </Cards.Card>
-  <Cards.Card title="Коды ошибок" href="/reference/errors" arrow>
-    Стабильные машинные коды и логика ветвления.
-  </Cards.Card>
-</Cards>
+- **[Быстрый старт](/get-started/quickstart)** — регистрация, ключ, первый запрос. 60 секунд.
+- **[Изображения](/generate/images)**, **[видео](/generate/video)**, **[аудио](/generate/audio)** — с примерами кода для каждого типа.
+- **[Шпаргалка по API](/reference/cheatsheet)** — все эндпоинты на одной странице.
 
 ## Базовые URL
 
 ```
 Production    https://api.neuroartist.ru
 Staging       https://staging.neuroartist.ru
-Локально      http://localhost:8000
 ```
 
 ## Для AI-агентов
 
-`/llms.txt` — компактный markdown-конспект с ключевыми фактами для контекста LLM.
+`/llms.txt` — компактный markdown-конспект документации.
 `/llms-full.txt` — полная документация одним файлом.
-
-OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU). Интерактивный playground — [`/docs`](https://api.neuroartist.ru/docs).
+OpenAPI 3.1: [`/openapi.json`](https://api.neuroartist.ru/openapi.json) (EN), [`/openapi.ru.json`](https://api.neuroartist.ru/openapi.ru.json) (RU).
