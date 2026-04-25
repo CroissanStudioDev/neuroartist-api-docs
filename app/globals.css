@@ -42,3 +42,18 @@ html.dark .na-brand-text {
 .na-brand-text-muted {
   opacity: 0.55;
 }
+
+/* Хлебные крошки чуть крупнее и контрастнее, особенно в dark — дефолт
+   text-gray-400 / text-sm на тёмном плохо читается. */
+.nextra-breadcrumb {
+  font-size: 0.9375rem !important;
+}
+html.light .nextra-breadcrumb {
+  color: rgb(0 0 0 / 60%) !important;
+}
+html.dark .nextra-breadcrumb {
+  color: rgb(255 255 255 / 70%) !important;
+}
+.nextra-breadcrumb a:hover {
+  color: hsl(110 72% 45%) !important;
+}
