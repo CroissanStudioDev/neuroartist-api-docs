@@ -11,35 +11,23 @@ import { Steps } from 'nextra/components'
 
 ### Создайте аккаунт
 
-В дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) или через API:
-
-```bash
-curl -X POST https://api.neuroartist.ru/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"MyStrongPassword2026!","name":"You"}'
-```
-
-После регистрации начисляется welcome-бонус 50 ₽ (≈ 6 image-генераций).
+Зарегистрируйтесь в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru). После подтверждения email на баланс начисляется приветственный бонус — этого хватит на несколько image-генераций.
 
 ### Получите API-ключ
 
-В дашборде: **Настройки → API-ключи → Новый ключ**. Ключ показывается **один раз** — сохраните.
+В дашборде: **Настройки → API-ключи → Новый ключ**.
 
 ```
 na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Передаётся в `Authorization: Bearer …` или `x-api-key: …`.
+Ключ показывается **один раз** — сохраните в env вашего приложения. Передаётся в каждом запросе:
 
-### Найдите модель
-
-```bash
-curl 'https://api.neuroartist.ru/models?category=image&sort=popular&limit=5'
+```
+Authorization: Bearer na_live_xxxxxxxxxxxxxxxx
 ```
 
-Каждая модель — `modelId` (содержит слеши, не URL-кодируйте), `creditCost`, JSON Schema input-а.
-
-### Сгенерируйте
+### Сгенерируйте изображение
 
 ```bash
 curl -X POST https://api.neuroartist.ru/run/flux/dev \
@@ -47,20 +35,20 @@ curl -X POST https://api.neuroartist.ru/run/flux/dev \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "editorial portrait, monochrome, soft daylight",
-    "image_size": "portrait_4_3",
-    "num_inference_steps": 28
+    "image_size": "portrait_4_3"
   }'
 ```
 
 ```json
 {
-  "images": [{ "url": "https://s3.cloud.ru/neuroartist/.../result.webp", "width": 768, "height": 1024 }],
-  "seed": 12345,
-  "timings": { "inference": 4.21 }
+  "images": [
+    { "url": "https://s3.cloud.ru/.../result.webp", "width": 768, "height": 1024 }
+  ],
+  "seed": 12345
 }
 ```
 
-Готово. URL живёт в нашем S3 пока вы его не удалите.
+URL живёт в нашем S3 — забирайте напрямую, ссылка не протухает.
 
 </Steps>
 
@@ -68,10 +56,10 @@ curl -X POST https://api.neuroartist.ru/run/flux/dev \
 
 | Задача | Гайд |
 | --- | --- |
-| Долгая генерация с прогрессом | [Async + SSE](/build/async) |
+| Долгая генерация с прогрессом | [Асинхронная очередь и SSE](/build/async) |
 | Серверный pipeline без UI | [Приём webhook](/build/webhooks) |
 | img2img / video2video | [Загрузка файлов](/build/upload-inputs) |
-| Не закончились кредиты ночью | [Авто-пополнение](/billing#авто-пополнение) |
+| Не остаться без кредитов ночью | [Авто-пополнение](/billing#авто-пополнение) |
 | Точная стоимость до запуска | `POST /models/{modelId}/estimate` |
 
 ## Если не сработало
@@ -79,9 +67,9 @@ curl -X POST https://api.neuroartist.ru/run/flux/dev \
 | Статус | Код | Что делать |
 | --- | --- | --- |
 | 401 | `unauthorized` | Ключ просрочен или невалиден — создайте новый |
-| 402 | `insufficient_balance` | Пополните баланс через [`/billing/topup`](/api/billing) |
+| 402 | `insufficient_balance` | Пополните баланс в дашборде |
 | 404 | `unknown_model` | Опечатка в `modelId` — `GET /models` для списка |
-| 429 | `rate_limited` | См. `Retry-After` в headers |
-| 503 | `provider_error` | Upstream флапает — повторите через `Retry-After` сек |
+| 429 | `rate_limited` | См. `Retry-After` в заголовках ответа |
+| 503 | `provider_error` | Upstream флапает — повторите через `Retry-After` секунд |
 
 Полный справочник — [коды ошибок](/errors).
