@@ -8,6 +8,14 @@ html.light {
   --nextra-primary-lightness: 37%;
 }
 
+/* Light brand слегка тёмный для светлой темы; в тёмной выкручиваем
+   lightness, чтобы lime читался на чёрном фоне. */
+html.dark {
+  --nextra-primary-hue: 110deg;
+  --nextra-primary-saturation: 65%;
+  --nextra-primary-lightness: 55%;
+}
+
 html {
   font-family:
     var(--font-golos-text), ui-sans-serif, system-ui, -apple-system,

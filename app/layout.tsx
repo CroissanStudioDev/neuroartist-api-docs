@@ -22,8 +22,11 @@ const geistMono = Geist_Mono({
 })
 
 export const viewport: Viewport = {
-  themeColor: '#6FA31B',
-  colorScheme: 'light'
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' }
+  ],
+  colorScheme: 'light dark'
 }
 
 export const metadata: Metadata = {
@@ -77,8 +80,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           navbar={navbar}
           pageMap={await getPageMap()}
           footer={footer}
-          darkMode={false}
-          nextThemes={{ forcedTheme: 'light', defaultTheme: 'light' }}
+          nextThemes={{ defaultTheme: 'system' }}
           sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true, toggleButton: true }}
           toc={{ backToTop: 'Наверх', title: 'Содержание' }}
           search={
