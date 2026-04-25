@@ -44,24 +44,20 @@ curl -X POST https://api.neuroartist.ru/run/kokoro/american-english \
 
 ## Клонирование голоса
 
-```bash
-# 1. Загрузить reference голос (5–30 секунд чистой речи)
-curl -X POST https://api.neuroartist.ru/me/uploads \
-  -b cookies.txt \
-  -F "file=@/path/to/voice-sample.wav"
-# {"url":"https://s3.cloud.ru/neuroartist/uploads/…"}
+Reference-голос (5–30 секунд чистой речи) передаётся как публичный URL в `audio_url`:
 
-# 2. Создать клон
+```bash
+# Создать клон
 curl -X POST https://api.neuroartist.ru/run/elevenlabs/voice-cloning \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "audio_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "audio_url": "https://your-cdn.example.com/voice-sample.wav",
     "name": "my-voice"
   }'
 # Получите voiceId
 
-# 3. Использовать в TTS
+# Использовать в TTS
 curl -X POST https://api.neuroartist.ru/run/elevenlabs/tts/multilingual-v2 \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
@@ -71,17 +67,11 @@ curl -X POST https://api.neuroartist.ru/run/elevenlabs/tts/multilingual-v2 \
 ## Распознавание речи
 
 ```bash
-# 1. Загрузить аудио
-curl -X POST https://api.neuroartist.ru/me/uploads \
-  -b cookies.txt \
-  -F "file=@/path/to/recording.mp3"
-
-# 2. Распознать
 curl -X POST https://api.neuroartist.ru/run/whisper \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "audio_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "audio_url": "https://your-cdn.example.com/recording.mp3",
     "task": "transcribe",
     "language": "ru"
   }'

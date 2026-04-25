@@ -1,9 +1,7 @@
 ---
 title: Биллинг
-description: Кредитная модель, top-up через YooKassa, авто-пополнение, чеки 54-ФЗ
+description: Кредитная модель, пополнение, авто-пополнение, чеки 54-ФЗ
 ---
-
-import { Steps, Callout } from 'nextra/components'
 
 # Биллинг
 
@@ -19,9 +17,9 @@ top-up   →  balance  →  deduct (submit)  →  refund (если упало)
 
 - **Списание** атомарно при `POST /run` или `POST /queue/{modelId}`. Не хватает — `402 insufficient_balance`, **запрос провайдеру не уходит**.
 - **Возврат** — автоматически при upstream-ошибке.
-- **Reconciliation** — корректировка по факту (для per-second/per-megapixel моделей).
+- **Reconciliation** — корректировка по факту (для per-second / per-megapixel моделей).
 
-Все движения — в `GET /me/transactions` с типами `topup` / `deduct` / `refund` / `grant`.
+Все движения видны в `GET /me/transactions` с типами `topup` / `deduct` / `refund` / `grant`.
 
 ## Проверить баланс
 
@@ -41,108 +39,47 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 # {"estimatedCostRub":8,"priceUnit":"image","quantity":1,"currency":"RUB"}
 ```
 
-## Пополнение баланса
+## Пополнение
 
-Только для сессии (через дашборд). Минимум `MIN_TOPUP_RUB` (по умолчанию 500 ₽).
+Делается в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) → **Биллинг → Пополнить**. Минимальная сумма — 500 ₽. Оплата через YooKassa, чек 54-ФЗ формируется автоматически.
 
-```bash
-curl -X POST https://api.neuroartist.ru/billing/topup \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"amountRub":1000,"returnUrl":"https://gateway.neuroartist.ru/billing"}'
-```
-
-```json
-{
-  "payment": { "id": "pay_abc", "status": "pending", "creditsToGrant": 1000, "amountKopecks": 100000 },
-  "confirmationUrl": "https://yoomoney.ru/checkout/payments/v2/contract?…"
-}
-```
-
-Перенаправьте пользователя на `confirmationUrl`. Зачисление — автоматически по webhook от YooKassa за 1–5 секунд.
-
-## Сохранённые карты
-
-После успешной оплаты YooKassa возвращает `payment_method_id`. Сервис сохраняет (с маской PAN), чтобы не вводить реквизиты повторно.
-
-```bash
-# список
-curl https://api.neuroartist.ru/me/payment-methods -b cookies.txt
-
-# сделать default
-curl -X POST https://api.neuroartist.ru/me/payment-methods/pm_abc/default \
-  -b cookies.txt
-
-# удалить
-curl -X DELETE https://api.neuroartist.ru/me/payment-methods/pm_abc \
-  -b cookies.txt
-```
+После успешной оплаты карта сохраняется (с маской PAN) — чтобы не вводить реквизиты повторно и для авто-пополнения.
 
 ## Авто-пополнение
 
-Чтобы не получать `402 insufficient_balance` посреди пайплайна:
+Чтобы не получить `402 insufficient_balance` посреди пайплайна:
 
 ```
-balance < thresholdRub  →  charge amountRub с default-карты  →  webhook  →  +amountRub
+balance < threshold  →  charge amount с default-карты  →  webhook  →  +amount
 ```
 
 Срабатывает в момент попытки списания. Не чаще раза в 60 секунд.
 
-<Steps>
+В дашборде → **Биллинг → Авто-пополнение**:
 
-### Сохраните карту
+- **Threshold** — порог срабатывания (минимум 10 ₽).
+- **Amount** — сумма пополнения (50–10 000 ₽).
+- **Default-карта** — обязательно, выбирается отдельно.
 
-Заплатите один раз через `POST /billing/topup` — YooKassa вернёт `payment_method_id`, сервис его сохранит автоматически.
+Если списание не прошло (карта отклонена, нет default-метода) — обычная ошибка `402 insufficient_balance` на текущем submit + email-уведомление.
 
-### Сделайте карту default
+## Чеки и история платежей
 
-```bash
-curl -X POST https://api.neuroartist.ru/me/payment-methods/pm_abc/default \
-  -b cookies.txt
-```
-
-### Включите авто-пополнение
+Список платежей через API:
 
 ```bash
-curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"enabled":true,"thresholdRub":200,"amountRub":1000}'
+curl https://api.neuroartist.ru/billing/payments \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
 ```
 
-| Поле | Диапазон |
-| --- | --- |
-| `thresholdRub` | ≥ `AUTO_TOPUP_MIN_THRESHOLD_RUB` (default 10) |
-| `amountRub` | `AUTO_TOPUP_MIN_AMOUNT_RUB`–`AUTO_TOPUP_MAX_AMOUNT_RUB` (default 50–10 000) |
-
-</Steps>
-
-<Callout type="info">
-  Авто-пополнение работает только из сессии — API-ключ не настроит. Это намеренно: утёкший ключ не должен включать списания с карты.
-</Callout>
-
-Выключить:
-
-```bash
-curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"enabled":false}'
-```
-
-Если списание не прошло (карта отклонена, нет default-метода) — обычная ошибка `402 insufficient_balance` на текущем submit. Email + запись `topup_failed` в `/me/activity`.
-
-## Чеки 54-ФЗ
-
-```bash
-curl -L https://api.neuroartist.ru/billing/payments/pay_abc/receipt -b cookies.txt
-# 302 → https://yookassa.ru/receipts/…
-```
+Сами чеки 54-ФЗ и PDF-выписки — в дашборде → **Биллинг → История**.
 
 ## Welcome-бонус и уведомление о низком балансе
 
-- При регистрации — `WELCOME_BONUS_RUB` (по умолчанию 50 ₽).
-- При просадке ниже `LOW_BALANCE_THRESHOLD_RUB` (по умолчанию 100) — **один** email до следующего пополнения.
-- Отписаться: `PATCH /me {"lowBalanceEmailOptOut":true}`.
+- При регистрации — приветственный бонус, хватит на первые тесты.
+- При просадке ниже 100 ₽ — **один** email до следующего пополнения. Отписаться можно в дашборде.
 
 ## Дальше
 
-- [`/billing` в справочнике](/api/billing) — точные схемы платежей, чеков и статусов.
-- [Коды ошибок](/errors) — обработка `insufficient_balance`.
+- [`/billing` в справочнике](/api/billing) — точные схемы платежей и чеков.
+- [Коды ошибок](/errors) — обработка `insufficient_balance` и `payment_provider`.

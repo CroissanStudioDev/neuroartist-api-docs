@@ -33,7 +33,7 @@ description: Машинно-читаемые коды и логика ветвл
 | 401 | `invalid_signature` | Подпись webhook невалидна | (Только при приёме webhook от провайдера) |
 | 402 | `insufficient_balance` | Кредитов меньше | Пополните баланс; поля `required` и `available` |
 | 403 | `forbidden` | Нет прав | |
-| 403 | `forbidden` | API-ключ пришёл на session-only ручку | Используйте session |
+| 403 | `forbidden` | Действие доступно только в дашборде | Сделайте действие в дашборде |
 | 404 | `not_found` | Ресурс не существует или не ваш | (IDOR-guard, не различаются) |
 | 404 | `unknown_model` | Опечатка в `modelId` | `GET /models` |
 | 409 | `conflict` | Уникальный ключ занят | |

@@ -11,7 +11,7 @@ description: Пополнение через YooKassa, платежи, чеки
 
 Создать платёж на пополнение.
 
-**Аутентификация: session-only.** Из API-ключа top-up создать нельзя.
+**Доступно только из дашборда.** Через API-ключ создать платёж нельзя.
 
 **Тело запроса:**
 
@@ -105,16 +105,7 @@ description: Пополнение через YooKassa, платежи, чеки
 
 ## `GET /billing/payments/{id}/receipt`
 
-**session-only**
-
-302-редирект на чек YooKassa.
-
-```bash
-curl -L https://api.neuroartist.ru/billing/payments/pay_abc/receipt -b cookies.txt
-# 302 → https://yookassa.ru/receipts/…
-```
-
-**Ошибки:** `404 not_found` (платёж не succeeded, чек не оформлен или платёж не ваш), `403 forbidden`.
+**Доступно только из дашборда.** 302-редирект на чек YooKassa. Чеки 54-ФЗ — в дашборде → **Биллинг → История**.
 
 ## Дальше
 

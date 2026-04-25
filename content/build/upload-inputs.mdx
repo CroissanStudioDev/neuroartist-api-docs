@@ -1,102 +1,55 @@
 ---
-title: Загрузить input
-description: Загрузка файла для img2img / video2video / voice-clone
+title: Загрузка файлов
+description: Передача image_url / video_url / audio_url для img2img, video2video, voice-clone
 ---
 
-# Загрузка входных файлов
+# Загрузка файлов
 
-Многие модели принимают `image_url` / `video_url` / `audio_url`. Чтобы передать свой файл — сначала загрузите его в наш сервис.
+Многие модели принимают `image_url`, `video_url` или `audio_url` как часть input. Например, image-to-image или voice-cloning. Передавайте публичный HTTPS-URL — всё, что доступно по `https://`, подходит.
 
-```
-POST /me/uploads
-Content-Type: multipart/form-data
-field: file
-```
+## Свой публичный URL
 
-**Session-only.** API-ключ не принимается.
-
-## Готовый рецепт
-
-```bash
-curl -X POST https://api.neuroartist.ru/me/uploads \
-  -b cookies.txt \
-  -F "file=@/path/to/photo.jpg"
-```
-
-```json
-{
-  "assetId": "asset_abc",
-  "url": "https://s3.cloud.ru/neuroartist/uploads/u_…/asset_abc.jpg",
-  "contentType": "image/jpeg",
-  "sizeBytes": 487123
-}
-```
-
-Используйте `url` в input модели:
+Самый прямой путь: положите файл на ваш CDN или S3 (с публичным доступом или signed URL) и используйте этот URL в запросе:
 
 ```bash
 curl -X POST https://api.neuroartist.ru/run/flux/dev/image-to-image \
-  -H "Authorization: Bearer na_live_xxxx" \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "make it watercolor",
-    "image_url": "https://s3.cloud.ru/neuroartist/uploads/u_…/asset_abc.jpg",
+    "image_url": "https://your-cdn.example.com/photo.jpg",
     "strength": 0.65
   }'
 ```
 
-## Из браузера
+Условия для URL:
 
-```js
-async function upload(file) {
-  const form = new FormData()
-  form.append('file', file)
-  const resp = await fetch('https://api.neuroartist.ru/me/uploads', {
-    method: 'POST',
-    credentials: 'include',
-    body: form
-  })
-  if (!resp.ok) {
-    const err = await resp.json()
-    throw new Error(`${resp.status} ${err.code}`)
-  }
-  return resp.json()
-}
+- HTTPS, доступ без авторизации (либо signed URL).
+- CORS не нужен (наш бэкенд скачает по серверному запросу).
+- Должен оставаться доступным до конца генерации — иначе `provider_error`.
 
-const { url } = await upload(document.querySelector('input[type=file]').files[0])
-```
+## Загрузка через дашборд
 
-## Лимиты
+Если своего хостинга нет, в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) → **Файлы → Загрузить** можно положить файл в наш S3 и получить публичный `https://s3.cloud.ru/...` URL — его и передавайте в `image_url`.
 
 | Параметр | Значение |
 | --- | --- |
-| Max size | `MAX_UPLOAD_BYTES` (10 MiB по умолчанию) |
+| Max size | 10 MiB |
 | Image | `image/jpeg` `image/png` `image/webp` `image/heic` `image/heif` |
 | Video | `video/mp4` `video/quicktime` `video/webm` |
 | Audio | `audio/mpeg` `audio/wav` `audio/webm` `audio/mp4` `audio/ogg` `audio/flac` |
 
-Превышение → `413 asset_too_large`. Неподдерживаемый MIME → `415 unsupported_mime`.
-
-## Альтернатива — внешний URL
-
-Если у вас уже есть публичный URL с CORS — можно сразу подсунуть в input модели **без** загрузки в наш сервис:
-
-```json
-{ "image_url": "https://your-cdn.example.com/photo.jpg", "prompt": "…" }
-```
-
-Риск на вас — если URL отвалится во время генерации, упадёт `provider_error`.
-
-## Когда нужен upload, а когда нет
+## Когда нужен URL, а когда нет
 
 | Schema поле | Действие |
 | --- | --- |
-| `image_url`, `video_url`, `audio_url`, `*_url` | Нужно URL — загрузите либо подсуньте свой |
-| `prompt`, `negative_prompt` (string) | Текст — никаких uploads |
-| `image` (base64) — редкий случай | base64 inline в JSON |
+| `image_url`, `video_url`, `audio_url`, `*_url` | Передавайте URL |
+| `prompt`, `negative_prompt` (string) | Просто текст |
+| `image` (base64, редкий случай) | base64 inline в JSON |
+
+Чтобы узнать какие поля принимает конкретная модель — `GET /models/{modelId}` отдаёт JSON Schema input-а.
 
 ## Дальше
 
 - [Image-to-image](/generate/images#image-to-image-img2img) — использовать `image_url` в генерации.
-- [Image-to-video](/generate/video#image-to-video) — загрузить стартовый кадр.
-- [`/me/uploads` в справочнике](/api/me#post-meuploads) — ошибки и ограничения.
+- [Image-to-video](/generate/video#image-to-video) — стартовый кадр для видео.

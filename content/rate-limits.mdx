@@ -1,11 +1,11 @@
 ---
 title: Лимиты запросов
-description: Лимиты по IP, per-user, per-key и retry-стратегия
+description: Лимиты на пользователя и API-ключ, retry-стратегия
 ---
 
 # Лимиты запросов
 
-Все лимиты sliding-window поверх Redis. Превышение → `429 Too Many Requests`:
+Все лимиты sliding-window. Превышение → `429 Too Many Requests`:
 
 ```
 X-RateLimit-Limit: 100
@@ -18,14 +18,11 @@ Retry-After: 47
 
 | Область | Лимит | На что |
 | --- | --- | --- |
-| IP | 10 / 5 мин | `POST /api/auth/sign-in/email` |
-| IP | 5 / 5 мин | `POST /api/auth/sign-up/email` |
-| IP | 3 / 10 мин | `POST /api/auth/forgot-password/email` |
+| User | 100 / час | `POST /run/*`, `POST /queue/*` |
+| API-ключ | 1000 / час | Любая ручка через ключ |
+| API-ключ | `monthlyLimitRub` (опц.) | Расход ₽ на ключ за месяц → `429 key_limit_exceeded` |
+| User | 5 одновременных | SSE-стримы прогресса |
 | IP | 100 / 1 мин | `POST /webhooks/*` |
-| User | `USER_GENERATION_LIMIT_PER_HOUR` (default 100) / час | `POST /run/*`, `POST /queue/*`, `POST /integrations/*` |
-| API-key | 1000 / час | Любая ручка через ключ |
-| API-key | `metadata.monthlyLimitRub` (опц.) | Расход в ₽/месяц на ключ → `429 key_limit_exceeded` |
-| User | `SSE_MAX_CONNECTIONS_PER_USER` (default 5) | Одновременные SSE-стримы |
 
 ## Retry-стратегия
 
@@ -41,22 +38,17 @@ async function callWithRetry(url, init, maxRetries = 3) {
 }
 ```
 
-`503 provider_error` тоже отдаёт `Retry-After` — это circuit breaker, провайдер флапает.
+`503 provider_error` тоже отдаёт `Retry-After` — это circuit breaker, провайдер флапает. Стратегия та же.
 
 ## Месячный лимит на ключ
 
-```bash
-curl -X PATCH https://api.neuroartist.ru/me/keys/key_abc \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"metadata":{"monthlyLimitRub":5000}}'
-```
+В дашборде у каждого ключа можно поставить cap расхода в рублях за календарный месяц. Превышение → `429 key_limit_exceeded`. Сбрасывается 1 числа.
 
-Используйте, чтобы:
-- Ограничить ключ для интеграции (не больше N ₽/мес).
-- Дать sandbox-ключ с маленьким cap для тестов.
-- Защититься от непредвиденного расхода в production.
+Удобно для:
 
-Сбрасывается 1 числа каждого месяца.
+- ограничения партнёрской интеграции;
+- sandbox-ключа с маленьким cap для тестов;
+- защиты production от непредвиденного расхода.
 
 ## Что НЕ ограничено
 
@@ -65,10 +57,9 @@ curl -X PATCH https://api.neuroartist.ru/me/keys/key_abc \
 
 ## Заголовки в CORS
 
-`X-RateLimit-*` и `Retry-After` — в expose-list, читаемы из браузера.
+`X-RateLimit-*` и `Retry-After` экспонируются в browser fetch — читаемы из JS на клиенте.
 
 ## Дальше
 
 - [Коды ошибок](/errors) — как ветвить по `error`.
 - [Асинхронная очередь и SSE](/build/async) — как не упереться в лимит SSE.
-- [Аутентификация](/authentication) — monthly cap на API-ключ.

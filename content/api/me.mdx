@@ -5,7 +5,7 @@ description: Профиль, баланс, ключи, активность
 
 # `/me`
 
-Все эндпоинты требуют аутентификации. Часть — только session-cookie (не API-ключ); они помечены как **session-only**.
+Все эндпоинты требуют аутентификации. Часть — часть — только из дашборда.
 
 ## Профиль
 
@@ -31,7 +31,7 @@ description: Профиль, баланс, ключи, активность
 
 ### `PATCH /me`
 
-**session-only**
+**только из дашборда**
 
 ```json
 {
@@ -47,7 +47,7 @@ description: Профиль, баланс, ключи, активность
 
 ### `GET /me/sessions`
 
-**session-only**
+**только из дашборда**
 
 ```json
 {
@@ -59,7 +59,7 @@ description: Профиль, баланс, ключи, активность
 
 ### `DELETE /me/sessions/{id}`
 
-**session-only**
+**только из дашборда**
 
 Ревокирует сессию. Ответ 204.
 
@@ -237,7 +237,7 @@ Time-series.
 
 ### `GET /me/keys`
 
-**session-only**
+**только из дашборда**
 
 ```json
 {
@@ -257,7 +257,7 @@ Time-series.
 
 ### `POST /me/keys`
 
-**session-only**
+**только из дашборда**
 
 **Тело запроса:**
 
@@ -281,7 +281,7 @@ Time-series.
 
 ### `PATCH /me/keys/{id}`
 
-**session-only**
+**только из дашборда**
 
 **Тело запроса:**
 
@@ -296,7 +296,7 @@ Time-series.
 
 ### `DELETE /me/keys/{id}`
 
-**session-only**
+**только из дашборда**
 
 Ответ 204.
 
@@ -314,13 +314,13 @@ Time-series.
 
 ### `POST /me/payment-methods/{id}/default`
 
-**session-only**
+**только из дашборда**
 
 Сделать карту default.
 
 ### `DELETE /me/payment-methods/{id}`
 
-**session-only**
+**только из дашборда**
 
 Удалить карту. Ответ 204.
 
@@ -328,7 +328,7 @@ Time-series.
 
 ### `PATCH /me/auto-topup`
 
-**session-only**
+**только из дашборда**
 
 **Тело запроса:**
 
@@ -342,7 +342,7 @@ Time-series.
 
 ### `GET /me/webhook-secret`
 
-**session-only**
+**только из дашборда**
 
 ```json
 { "secret": "base64-32-byte-secret" }
@@ -352,7 +352,7 @@ Time-series.
 
 ### `POST /me/webhook-secret/rotate`
 
-**session-only**
+**только из дашборда**
 
 ```json
 { "secret": "base64-32-byte-secret" }
@@ -364,7 +364,7 @@ Time-series.
 
 ### `POST /me/uploads`
 
-**session-only**
+**только из дашборда**
 
 `multipart/form-data`, поле `file`.
 
@@ -385,6 +385,6 @@ Time-series.
 
 ## Дальше
 
-- [Аутентификация](/authentication) — какие ручки session-only.
+- [Аутентификация](/authentication) — какие операции доступны только из дашборда.
 - [Биллинг и кредиты](/billing) — баланс, платежи и сохранённые карты.
 - [Приём webhook](/build/webhooks) — как использовать signing secret.

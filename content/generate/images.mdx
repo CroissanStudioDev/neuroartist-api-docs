@@ -64,27 +64,20 @@ curl https://api.neuroartist.ru/models/flux/dev | jq .schema
 
 ## Image-to-image (img2img)
 
-Передаёте `image_url`, добавляете `strength` (0..1).
+Передайте публичный HTTPS-URL картинки в `image_url`, добавьте `strength` (0..1):
 
 ```bash
-# 1. Загрузить input
-curl -X POST https://api.neuroartist.ru/me/uploads \
-  -b cookies.txt \
-  -F "file=@/path/to/photo.jpg"
-# {"assetId":"…","url":"https://s3.cloud.ru/neuroartist/uploads/…"}
-
-# 2. Сгенерировать вариацию
 curl -X POST https://api.neuroartist.ru/run/flux/dev/image-to-image \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "image_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "image_url": "https://your-cdn.example.com/photo.jpg",
     "prompt": "make it watercolor",
     "strength": 0.65
   }'
 ```
 
-Подробнее про upload — [загрузка входных файлов](/build/upload-inputs).
+Подробнее про источники файлов — [Загрузка файлов](/build/upload-inputs).
 
 ## Длинные генерации
 

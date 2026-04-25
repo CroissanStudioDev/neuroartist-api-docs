@@ -1,31 +1,23 @@
 ---
 title: Аутентификация
-description: Session cookie или API-ключ — оба работают на одних и тех же ручках
+description: API-ключ в заголовке Authorization
 ---
 
 # Аутентификация
 
-Любая защищённая ручка принимает **один из**:
+Все защищённые ручки принимают API-ключ в заголовке `Authorization`:
 
 ```
 Authorization: Bearer na_live_xxxxxxxxxxxxxxxx
-Cookie: better-auth.session_token=…
 ```
 
-## Когда что использовать
+Создаётся в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) → **Настройки → API-ключи → Новый ключ**. Формат: `na_live_` + 32 символа. Показывается **один раз** при создании.
 
-| Сценарий | Способ |
-| --- | --- |
-| Серверный код, CLI, бэкенд-интеграция | API-ключ |
-| Браузер, дашборд | Session cookie |
-| Управление ключами / платежами / профилем | **Только** session (см. ниже) |
-
-## API-ключ
-
-Создание — UI или `POST /api/auth/api-key/create`. Формат: `na_live_` + 32 символа. Возвращается **один раз** при создании.
+## Проверить, что ключ работает
 
 ```bash
-curl https://api.neuroartist.ru/me -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+curl https://api.neuroartist.ru/me \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
 ```
 
 ```json
@@ -35,64 +27,36 @@ curl https://api.neuroartist.ru/me -H "Authorization: Bearer na_live_xxxxxxxxxxx
 }
 ```
 
-### Месячный лимит на ключ
+Если ключ невалиден или просрочен — `401 unauthorized`.
 
-```bash
-curl -X PATCH https://api.neuroartist.ru/me/keys/key_abc \
-  -H "Content-Type: application/json" -b cookies.txt \
-  -d '{"metadata":{"monthlyLimitRub":5000}}'
-```
+## Месячный лимит на ключ
 
-Превышение → `429 key_limit_exceeded`. Сбрасывается 1 числа.
+В дашборде у каждого ключа можно поставить cap расхода в рублях за календарный месяц. Превышение → `429 key_limit_exceeded`, сбрасывается 1 числа. Удобно для:
 
-### Session cookie
+- ограничения партнёрской интеграции;
+- sandbox-ключа с маленьким cap для тестов;
+- защиты production от непредвиденного расхода.
 
-Управляются [Better Auth](https://better-auth.com/) под `/api/auth/*`.
+## Что нельзя через API-ключ
 
-```bash
-# Регистрация
-curl -X POST https://api.neuroartist.ru/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"…","name":"You"}' \
-  -c cookies.txt
+Несколько критичных операций сделаны **только из дашборда** — чтобы утечка ключа не привела к компрометации платёжных данных:
 
-# Дальше — все запросы с -b cookies.txt
-curl https://api.neuroartist.ru/me -b cookies.txt
-```
+- управление API-ключами и сохранёнными картами;
+- настройка авто-пополнения и webhook-секрета;
+- `POST /billing/topup` и просмотр чеков;
+- админские ручки (`/admin/*`).
 
-Cookie: `better-auth.session_token`, `HttpOnly; Secure; SameSite=Lax`. Cross-origin браузерные запросы — с `credentials: 'include'`.
-
-### Yandex OAuth
-
-```
-GET /api/auth/sign-in/social?provider=yandex
-```
-
-Callback — `/api/auth/callback/yandex`.
-
-## Что строго session-only
-
-API-ключ принимается везде, кроме операций, где утечка ключа дала бы критический ущерб:
-
-- `PATCH /me`, `/me/sessions`, `/me/keys`, `/me/payment-methods/*`, `/me/auto-topup`, `/me/webhook-secret`, `/me/uploads`
-- `POST /billing/topup`, `GET /billing/payments/{id}/receipt`
-- Все `/admin/*`
-
-Эти ручки вернут `403 forbidden` для запросов с API-key.
+Запрос таких ручек с Bearer-ключом вернёт `403 forbidden`.
 
 ## Практики для production
 
-- Отдельный ключ на каждое окружение (`prod`, `local`).
-- Хранить в env / secrets manager. Не в репо.
-- Ротация при компрометации: `DELETE /me/keys/{id}` + создать новый.
-- Активные сессии — `GET /me/sessions`, ревок — `DELETE /me/sessions/{id}`.
-
-## Справочник
-
-Полный список auth-ручек — [`/api/auth`](/api/authentication).
+- Отдельный ключ для каждой среды (`prod`, `local`, CI).
+- Хранить в env / secret manager, не в репозитории.
+- При компрометации — удалить ключ в дашборде и создать новый. Старый сразу инвалидируется.
+- Включить месячный cap, если ключ используется внешней системой.
 
 ## Дальше
 
-- [Сгенерировать изображение](/build/sync) — первый server-side запрос с API-ключом.
-- [Биллинг и кредиты](/billing) — пополнение баланса через session-cookie.
-- [Лимиты запросов](/rate-limits) — per-user и per-key лимиты.
+- [Быстрый старт](/quickstart) — первый запрос с ключом за 60 секунд.
+- [Сгенерировать изображение](/build/sync) — `POST /run` со схемами параметров.
+- [Лимиты запросов](/rate-limits) — глобальные и per-key лимиты.

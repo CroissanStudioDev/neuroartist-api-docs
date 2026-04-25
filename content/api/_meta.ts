@@ -1,6 +1,5 @@
 export default {
   index: 'Обзор',
-  authentication: 'Аутентификация — /api/auth',
   run: 'Запросы — /run',
   queue: 'Очередь — /queue',
   me: 'Аккаунт — /me',

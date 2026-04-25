@@ -13,11 +13,8 @@ https://api.neuroartist.ru
 
 ## Аутентификация
 
-Один из:
-
 ```
 Authorization: Bearer na_live_xxxxxxxxxxxxxxxx
-Cookie: better-auth.session_token=…
 ```
 
 Подробнее — [Аутентификация](/authentication).
@@ -74,7 +71,6 @@ Cross-origin браузер → `credentials: 'include'` для session cookie.
 
 | Префикс | Группа | Назначение |
 | --- | --- | --- |
-| `/api/auth/*` | Аутентификация | Better Auth — регистрация, вход, OAuth, ключи |
 | `/models/*` | Models | Каталог |
 | `/run/{modelId}` | Run | Sync-генерация |
 | `/queue/{modelId}/*` | Queue | Async-генерация + SSE |

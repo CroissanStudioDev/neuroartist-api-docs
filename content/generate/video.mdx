@@ -74,24 +74,20 @@ await new Promise((resolve, reject) => {
 
 ## Image-to-video
 
-Передаёте `image_url` — сервис сделает анимацию из этой картинки.
+Передайте URL стартового кадра в `image_url`:
 
 ```bash
-# 1. Загрузить кадр
-curl -X POST https://api.neuroartist.ru/me/uploads \
-  -b cookies.txt \
-  -F "file=@/path/to/keyframe.jpg"
-
-# 2. Анимировать
 curl -X POST https://api.neuroartist.ru/queue/kling-video/v2/standard/image-to-video \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "image_url": "https://s3.cloud.ru/neuroartist/uploads/…",
+    "image_url": "https://your-cdn.example.com/keyframe.jpg",
     "prompt": "slow camera dolly forward",
     "duration": 5
   }'
 ```
+
+Источники изображения — [Загрузка файлов](/build/upload-inputs).
 
 ## Webhook вместо SSE (для production)
 
