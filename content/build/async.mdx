@@ -42,7 +42,7 @@ async function runAsync(modelId, input) {
   })
 }
 
-const result = await runAsync('fal-ai/flux/dev', {
+const result = await runAsync('flux/dev', {
   prompt: 'editorial portrait',
   image_size: 'portrait_4_3'
 })
@@ -64,13 +64,13 @@ PUT  /queue/{modelId}/requests/{id}/cancel     → отмена с refund
 
 ```bash
 while true; do
-  STATUS=$(curl -s "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/status" \
+  STATUS=$(curl -s "https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/status" \
     -H "Authorization: Bearer na_live_xxxx" | jq -r .status)
   [[ "$STATUS" == "COMPLETED" || "$STATUS" == "FAILED" ]] && break
   sleep 2
 done
 
-curl "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc" \
+curl "https://api.neuroartist.ru/queue/flux/dev/requests/req_abc" \
   -H "Authorization: Bearer na_live_xxxx"
 ```
 
@@ -81,7 +81,7 @@ curl "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc" \
 Самый устойчивый путь для серверных pipeline-ов:
 
 ```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
+curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app/cb' \
   -H "Authorization: Bearer na_live_xxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…"}'
@@ -114,7 +114,7 @@ const results = await Promise.all(ids.map(waitForCompletion))
 ## Отмена
 
 ```bash
-curl -X PUT https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/cancel \
+curl -X PUT https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/cancel \
   -H "Authorization: Bearer na_live_xxxx"
 ```
 

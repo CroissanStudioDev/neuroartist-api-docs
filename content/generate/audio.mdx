@@ -10,7 +10,7 @@ TTS (text-to-speech), музыка, voice-cloning. Большинство мод
 ## Минимальный пример — TTS
 
 ```bash
-curl -X POST https://api.neuroartist.ru/run/fal-ai/kokoro/american-english \
+curl -X POST https://api.neuroartist.ru/run/kokoro/american-english \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -33,12 +33,12 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/kokoro/american-english \
 
 | modelId | Назначение | Цена |
 | --- | --- | --- |
-| `fal-ai/kokoro/american-english` | TTS быстрый, English | 1 ₽ / запрос |
-| `fal-ai/elevenlabs/tts/multilingual-v2` | ElevenLabs TTS, multilingual | 6 ₽ / 1000 символов |
-| `fal-ai/elevenlabs/voice-cloning` | Клонирование голоса | 30 ₽ / клон |
-| `fal-ai/cassetteai/music-generator` | Музыка из prompt | 12 ₽ / 30 сек |
-| `fal-ai/stable-audio` | Stable Audio | 8 ₽ / 10 сек |
-| `fal-ai/whisper` | Распознавание речи (audio → text) | 3 ₽ / минута |
+| `kokoro/american-english` | TTS быстрый, English | 1 ₽ / запрос |
+| `elevenlabs/tts/multilingual-v2` | ElevenLabs TTS, multilingual | 6 ₽ / 1000 символов |
+| `elevenlabs/voice-cloning` | Клонирование голоса | 30 ₽ / клон |
+| `cassetteai/music-generator` | Музыка из prompt | 12 ₽ / 30 сек |
+| `stable-audio` | Stable Audio | 8 ₽ / 10 сек |
+| `whisper` | Распознавание речи (audio → text) | 3 ₽ / минута |
 
 Полный каталог — `GET /models?category=audio` или [/generate](/generate).
 
@@ -52,7 +52,7 @@ curl -X POST https://api.neuroartist.ru/me/uploads \
 # {"url":"https://s3.cloud.ru/neuroartist/uploads/…"}
 
 # 2. Создать клон
-curl -X POST https://api.neuroartist.ru/run/fal-ai/elevenlabs/voice-cloning \
+curl -X POST https://api.neuroartist.ru/run/elevenlabs/voice-cloning \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -62,7 +62,7 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/elevenlabs/voice-cloning \
 # Получите voiceId
 
 # 3. Использовать в TTS
-curl -X POST https://api.neuroartist.ru/run/fal-ai/elevenlabs/tts/multilingual-v2 \
+curl -X POST https://api.neuroartist.ru/run/elevenlabs/tts/multilingual-v2 \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"text":"Hello, world","voice_id":"<voiceId>"}'
@@ -77,7 +77,7 @@ curl -X POST https://api.neuroartist.ru/me/uploads \
   -F "file=@/path/to/recording.mp3"
 
 # 2. Распознать
-curl -X POST https://api.neuroartist.ru/run/fal-ai/whisper \
+curl -X POST https://api.neuroartist.ru/run/whisper \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{

@@ -10,7 +10,7 @@ description: text-to-image, image-to-image, inpainting через POST /run ил
 ## Минимальный пример
 
 ```bash
-curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+curl -X POST https://api.neuroartist.ru/run/flux/dev \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -33,13 +33,13 @@ URL живёт в нашем S3 пока вы его не удалите.
 
 | modelId | Назначение | Цена за image |
 | --- | --- | --- |
-| `fal-ai/flux/dev` | Универсальная text-to-image, FLUX.1 dev | 8 ₽ |
-| `fal-ai/flux-pro/v1.1-ultra` | Премиум, до 4K | 25 ₽ |
-| `fal-ai/flux/dev/image-to-image` | img2img со strength | 8 ₽ |
-| `fal-ai/flux-lora` | text-to-image с LoRA-адаптерами | 12 ₽ |
-| `fal-ai/recraft-v3` | Векторная иллюстрация, точная типографика | 18 ₽ |
-| `fal-ai/nano-banana` | Высокое качество, быстро | 6 ₽ |
-| `fal-ai/stable-diffusion-3.5-large` | SD 3.5 Large | 10 ₢ |
+| `flux/dev` | Универсальная text-to-image, FLUX.1 dev | 8 ₽ |
+| `flux-pro/v1.1-ultra` | Премиум, до 4K | 25 ₽ |
+| `flux/dev/image-to-image` | img2img со strength | 8 ₽ |
+| `flux-lora` | text-to-image с LoRA-адаптерами | 12 ₽ |
+| `recraft-v3` | Векторная иллюстрация, точная типографика | 18 ₽ |
+| `nano-banana` | Высокое качество, быстро | 6 ₽ |
+| `stable-diffusion-3.5-large` | SD 3.5 Large | 10 ₢ |
 
 Полный каталог — `GET /models?category=image` или [/generate](/generate).
 
@@ -48,7 +48,7 @@ URL живёт в нашем S3 пока вы его не удалите.
 Тело запроса — input модели по её JSON Schema. Получить:
 
 ```bash
-curl https://api.neuroartist.ru/models/fal-ai/flux/dev | jq .schema
+curl https://api.neuroartist.ru/models/flux/dev | jq .schema
 ```
 
 Общие поля у image-моделей:
@@ -74,7 +74,7 @@ curl -X POST https://api.neuroartist.ru/me/uploads \
 # {"assetId":"…","url":"https://s3.cloud.ru/neuroartist/uploads/…"}
 
 # 2. Сгенерировать вариацию
-curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev/image-to-image \
+curl -X POST https://api.neuroartist.ru/run/flux/dev/image-to-image \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -94,7 +94,7 @@ FLUX dev/pro — 3–10 секунд. Если **batched** или **upscale-мо
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 
 const submit = await fetch(
-  'https://api.neuroartist.ru/queue/fal-ai/flux-pro/v1.1-ultra',
+  'https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra',
   {
     method: 'POST',
     headers: {
@@ -107,7 +107,7 @@ const submit = await fetch(
 
 // Подписка на прогресс
 fetchEventSource(
-  `https://api.neuroartist.ru/queue/fal-ai/flux-pro/v1.1-ultra/requests/${submit.requestId}/progress/stream`,
+  `https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra/requests/${submit.requestId}/progress/stream`,
   {
     headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` },
     onmessage(msg) {
@@ -145,14 +145,14 @@ fetchEventSource(
 ## Стоимость
 
 ```bash
-curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
+curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…","num_images":4}'
 ```
 
 ```json
-{ "modelId": "fal-ai/flux/dev", "estimatedCostRub": 32, "priceUnit": "image", "quantity": 4 }
+{ "modelId": "flux/dev", "estimatedCostRub": 32, "priceUnit": "image", "quantity": 4 }
 ```
 
 ## Дальше

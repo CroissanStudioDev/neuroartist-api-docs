@@ -36,7 +36,7 @@ ngrok http 3000
 ### Передавайте URL при submit
 
 ```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://abcd.ngrok-free.app/cb' \
+curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://abcd.ngrok-free.app/cb' \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…"}'
@@ -203,7 +203,7 @@ async def cb(req: Request):
 {
   "type": "generation.completed",
   "requestId": "req_abc",
-  "modelId": "fal-ai/flux/dev",
+  "modelId": "flux/dev",
   "userId": "u_…",
   "completedAt": "…",
   "result": { "images": [{"url":"https://s3.cloud.ru/…"}], "seed": 12345 }

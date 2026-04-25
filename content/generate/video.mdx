@@ -16,7 +16,7 @@ const NA_API_KEY = process.env.NA_API_KEY
 const BASE = 'https://api.neuroartist.ru'
 
 // 1. Отправить задачу
-const submit = await fetch(`${BASE}/queue/fal-ai/wan-25-preview/text-to-video`, {
+const submit = await fetch(`${BASE}/queue/wan-25-preview/text-to-video`, {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${NA_API_KEY}`,
@@ -33,7 +33,7 @@ const submit = await fetch(`${BASE}/queue/fal-ai/wan-25-preview/text-to-video`, 
 // 2. Подписка на прогресс
 await new Promise((resolve, reject) => {
   fetchEventSource(
-    `${BASE}/queue/fal-ai/wan-25-preview/text-to-video/requests/${submit.requestId}/progress/stream`,
+    `${BASE}/queue/wan-25-preview/text-to-video/requests/${submit.requestId}/progress/stream`,
     {
       headers: { Authorization: `Bearer ${NA_API_KEY}` },
       onmessage(msg) {
@@ -63,12 +63,12 @@ await new Promise((resolve, reject) => {
 
 | modelId | Назначение | Цена |
 | --- | --- | --- |
-| `fal-ai/wan-25-preview/text-to-video` | text-to-video, до 8 сек | 60 ₽ / 5 сек |
-| `fal-ai/kling-video/v2/standard/text-to-video` | text-to-video Kling | 80 ₽ / 5 сек |
-| `fal-ai/kling-video/v2/standard/image-to-video` | image-to-video Kling | 80 ₽ / 5 сек |
-| `fal-ai/runway-gen3/turbo/image-to-video` | Runway Gen-3 Turbo | 100 ₽ / 5 сек |
-| `fal-ai/luma-dream-machine` | Luma Dream Machine | 90 ₽ / 5 сек |
-| `fal-ai/minimax/video-01-live` | MiniMax video-01 | 70 ₽ / 5 сек |
+| `wan-25-preview/text-to-video` | text-to-video, до 8 сек | 60 ₽ / 5 сек |
+| `kling-video/v2/standard/text-to-video` | text-to-video Kling | 80 ₽ / 5 сек |
+| `kling-video/v2/standard/image-to-video` | image-to-video Kling | 80 ₽ / 5 сек |
+| `runway-gen3/turbo/image-to-video` | Runway Gen-3 Turbo | 100 ₽ / 5 сек |
+| `luma-dream-machine` | Luma Dream Machine | 90 ₽ / 5 сек |
+| `minimax/video-01-live` | MiniMax video-01 | 70 ₽ / 5 сек |
 
 Полный каталог — `GET /models?category=video` или [/generate](/generate).
 
@@ -83,7 +83,7 @@ curl -X POST https://api.neuroartist.ru/me/uploads \
   -F "file=@/path/to/keyframe.jpg"
 
 # 2. Анимировать
-curl -X POST https://api.neuroartist.ru/queue/fal-ai/kling-video/v2/standard/image-to-video \
+curl -X POST https://api.neuroartist.ru/queue/kling-video/v2/standard/image-to-video \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -98,7 +98,7 @@ curl -X POST https://api.neuroartist.ru/queue/fal-ai/kling-video/v2/standard/ima
 Видео-генерация может занять 1–5 минут. Если ваш runtime serverless или клиент закрывает вкладку — используйте webhook:
 
 ```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/kling-video/v2/standard/text-to-video?webhook=https://your.app/cb' \
+curl -X POST 'https://api.neuroartist.ru/queue/kling-video/v2/standard/text-to-video?webhook=https://your.app/cb' \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…","duration":5}'
@@ -133,7 +133,7 @@ URL ведёт в наш S3. Срок жизни — пока не удалит�
 Цена считается за длительность (`duration`). До запуска можно посчитать:
 
 ```bash
-curl -X POST https://api.neuroartist.ru/models/fal-ai/kling-video/v2/standard/text-to-video/estimate \
+curl -X POST https://api.neuroartist.ru/models/kling-video/v2/standard/text-to-video/estimate \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…","duration":5}'

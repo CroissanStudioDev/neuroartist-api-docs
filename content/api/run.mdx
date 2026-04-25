@@ -29,7 +29,7 @@ Authorization: Bearer na_live_…
 ### Пример запроса
 
 ```bash
-curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+curl -X POST https://api.neuroartist.ru/run/flux/dev \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   --max-time 320 \
@@ -116,7 +116,7 @@ URL-ы — наш S3 CDN (Cloud.ru). Время жизни — пока вы н�
 ### `?passthrough=1`
 
 ```bash
-curl -X POST 'https://api.neuroartist.ru/run/fal-ai/flux/dev?passthrough=1' \
+curl -X POST 'https://api.neuroartist.ru/run/flux/dev?passthrough=1' \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -d '{"prompt":"…"}'
 ```
