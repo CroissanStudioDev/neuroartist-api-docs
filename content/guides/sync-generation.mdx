@@ -1,0 +1,233 @@
+---
+title: Синхронная генерация
+description: POST /run — единый запрос, ждёт результат до 5 минут
+---
+
+import { Tabs, Callout, Steps } from 'nextra/components'
+
+# Синхронная генерация через `/run`
+
+Самый простой путь: один HTTP-запрос → один ответ. Подходит для:
+
+- Картиночных моделей (генерация ≤ 30 сек).
+- Прототипов, скриптов, серверных задач.
+- Случаев, когда не хочется писать SSE-клиент.
+
+Не подходит для:
+
+- Видео > 60 секунд, длинных пайплайнов.
+- UX, где нужен прогресс-бар.
+- Случая, когда вы за reverse-proxy с idle-timeout < 5 минут.
+
+## Базовый пример
+
+<Tabs items={['curl', 'JavaScript', 'Python']}>
+  <Tabs.Tab>
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  --max-time 320 \
+  -d '{
+    "prompt": "minimalist editorial portrait, monochrome",
+    "image_size": "portrait_4_3",
+    "num_inference_steps": 28
+  }'
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```js
+const NA_API_KEY = process.env.NA_API_KEY
+
+async function generate(modelId, input) {
+  const resp = await fetch(
+    `https://api.neuroartist.ru/run/${modelId}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${NA_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(input)
+    }
+  )
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}))
+    throw new Error(`${resp.status} ${err.code}: ${err.message}`)
+  }
+
+  return resp.json()
+}
+
+const result = await generate('fal-ai/flux/dev', {
+  prompt: 'minimalist editorial portrait, monochrome',
+  image_size: 'portrait_4_3'
+})
+
+console.log(result.images[0].url)
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```python
+import os
+import requests
+
+NA_API_KEY = os.environ["NA_API_KEY"]
+
+def generate(model_id: str, payload: dict) -> dict:
+    resp = requests.post(
+        f"https://api.neuroartist.ru/run/{model_id}",
+        headers={"Authorization": f"Bearer {NA_API_KEY}"},
+        json=payload,
+        timeout=320,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+result = generate("fal-ai/flux/dev", {
+    "prompt": "minimalist editorial portrait, monochrome",
+    "image_size": "portrait_4_3",
+})
+
+print(result["images"][0]["url"])
+```
+
+  </Tabs.Tab>
+</Tabs>
+
+## modelId с слешами
+
+`modelId` может содержать `/` (например, `fal-ai/flux/dev` или `fal-ai/wan-25-preview/text-to-video`). В URL gateway-а такие слеши работают **как есть** — НЕ кодируйте их.
+
+```
+✓ /run/fal-ai/flux/dev
+✗ /run/fal-ai%2Fflux%2Fdev   (тоже работает, но не нужно)
+```
+
+## Timeout 5 минут
+
+Sync-режим жёстко ограничен 5 минутами. Если за это время провайдер не отвечает терминальным состоянием:
+
+- Для большинства моделей вернётся **готовый результат** (gateway ждёт его внутри).
+- В крайнем случае — `202 Accepted` с `requestId`:
+
+```json
+{
+  "code": "accepted",
+  "message": "Generation continues asynchronously",
+  "requestId": "req_abc",
+  "modelId": "fal-ai/flux/dev"
+}
+```
+
+Дальше — переключайтесь на `/queue` для polling или подписывайтесь на SSE:
+
+```bash
+curl https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/progress/stream \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+## Параметры тела
+
+Тело — это **input для модели**. Структура зависит от каждой конкретной модели и описана в её `schema`. Получить schema:
+
+```bash
+curl https://api.neuroartist.ru/models/fal-ai/flux/dev | jq .schema
+```
+
+В response — JSON Schema с полями, типами и enum-значениями. UI playground в `/models` его рендерит автоматически.
+
+## Структура ответа
+
+Меняется от модели к модели. Image-генерация обычно возвращает:
+
+```json
+{
+  "images": [
+    {
+      "url": "https://s3.cloud.ru/neuroartist/.../result.webp",
+      "width": 768,
+      "height": 1024,
+      "content_type": "image/webp"
+    }
+  ],
+  "seed": 12345,
+  "timings": { "inference": 4.21 },
+  "has_nsfw_concepts": [false]
+}
+```
+
+Видео:
+
+```json
+{
+  "video": {
+    "url": "https://s3.cloud.ru/neuroartist/.../result.mp4",
+    "content_type": "video/mp4",
+    "duration": 6.0
+  },
+  "seed": 42
+}
+```
+
+URL-ы — наш S3 (`s3.cloud.ru`). Подробнее — [Хранение результатов](/concepts/asset-rehosting).
+
+## Обработка ошибок
+
+```js
+try {
+  const result = await generate('fal-ai/flux/dev', input)
+} catch (e) {
+  switch (e.code) {
+    case 'insufficient_balance':
+      // Перенаправить на /billing/topup
+      return showTopupModal({ required: e.details.required })
+    case 'rate_limited':
+      // Подождать Retry-After секунд
+      return retryAfter(e.retryAfter)
+    case 'invalid_body':
+      // Опечатка в input — показать details.issues
+      return showValidationErrors(e.details.issues)
+    case 'provider_error':
+      // Circuit breaker / upstream down
+      return retryAfter(e.retryAfter ?? 30)
+    default:
+      throw e
+  }
+}
+```
+
+Полный список — [Коды ошибок](/concepts/errors).
+
+## Estimate перед запуском
+
+Если важно знать стоимость до списания:
+
+```bash
+curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"…","num_inference_steps":28}'
+```
+
+```json
+{ "modelId": "fal-ai/flux/dev", "estimatedCostRub": 8, "priceUnit": "image", "quantity": 1, "currency": "RUB" }
+```
+
+`estimatedCostRub` — верхняя граница. Реальное списание может оказаться меньше после reconciliation.
+
+## Когда переходить на async
+
+| Признак | Решение |
+| --- | --- |
+| Генерация часто > 60 секунд | Переходите на [/queue + SSE](/guides/async-generation) |
+| Нужен прогресс-бар в UI | SSE |
+| Reverse-proxy режет соединения | Webhook |
+| Хотите batched-запросы (parallel) | `/queue` (можно держать N в работе) |

@@ -1,0 +1,141 @@
+---
+title: /run
+description: Синхронная генерация — один запрос, один ответ
+---
+
+import { Callout } from 'nextra/components'
+
+# `/run`
+
+Синхронный режим — gateway сам ждёт terminal-состояния (до 5 минут) и отдаёт результат.
+
+Концептуальный гайд — [Sync generation](/guides/sync-generation).
+
+## `POST /run/{modelId}`
+
+**Auth:** API-key или session.  
+**Path:** `modelId` (поддерживает слеши, не URL-кодируйте их).  
+**Query:** `passthrough=1` (необязательный) — не переписывать URL-ы артефактов на S3.
+
+**Body:** input модели — JSON, соответствующий `schema` из `GET /models/{modelId}`.
+
+**Headers:**
+
+```
+Content-Type: application/json
+Authorization: Bearer na_live_…
+```
+
+### Request пример
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  --max-time 320 \
+  -d '{
+    "prompt": "minimalist editorial portrait, monochrome",
+    "image_size": "portrait_4_3",
+    "num_inference_steps": 28
+  }'
+```
+
+### Response 200 — успех
+
+Структура зависит от модели. Image:
+
+```json
+{
+  "images": [
+    {
+      "url": "https://s3.cloud.ru/neuroartist/.../result.webp",
+      "width": 768,
+      "height": 1024,
+      "content_type": "image/webp"
+    }
+  ],
+  "seed": 12345,
+  "timings": { "inference": 4.21 },
+  "has_nsfw_concepts": [false]
+}
+```
+
+Video:
+
+```json
+{
+  "video": {
+    "url": "https://s3.cloud.ru/neuroartist/.../result.mp4",
+    "content_type": "video/mp4",
+    "duration": 6.0
+  },
+  "seed": 42,
+  "timings": { "inference": 32.4 }
+}
+```
+
+URL-ы — наш S3 CDN (Cloud.ru). Время жизни — пока вы не удалите через `/me/activity`.
+
+### Response 202 — timeout, продолжение через async
+
+Если 5 минут истекли, а провайдер ещё не закончил:
+
+```json
+{
+  "code": "accepted",
+  "message": "Generation continues asynchronously",
+  "requestId": "req_abc",
+  "modelId": "fal-ai/flux/dev"
+}
+```
+
+Дальше — забирайте через `/queue/{modelId}/requests/{requestId}` либо подписывайтесь на SSE `/queue/.../progress/stream`.
+
+### Errors
+
+| Status | Code | Когда |
+| --- | --- | --- |
+| 400 | `invalid_body` | Input не прошёл schema-валидацию |
+| 401 | `unauthorized` | Нет валидного auth |
+| 402 | `insufficient_balance` | Не хватает кредитов; `details: { required, available }` |
+| 404 | `unknown_model` | `modelId` не найден |
+| 413 | `payload_too_large` | Тело > `MAX_BODY_BYTES` |
+| 415 | `unsupported_media_type` | Неподходящий `Content-Type` |
+| 429 | `rate_limited` | Превышен per-user лимит генераций |
+| 429 | `key_limit_exceeded` | Превышен месячный лимит расходов на ключ |
+| 500 | `generation_failed` | Провайдер вернул фатальный fail |
+| 502 | `provider_error` | Провайдер вернул 5xx |
+| 503 | `provider_error` (с `Retry-After`) | Circuit breaker открыт |
+| 504 | `timeout` | Sync-режим истёк за 5 минут (вернётся 202 чаще) |
+
+<Callout type="info">
+  При любой ошибке провайдера кредиты автоматически возвращаются на баланс. Refund — отдельная запись в `/me/transactions` с типом `refund`.
+</Callout>
+
+## Тонкости
+
+### `?passthrough=1`
+
+```bash
+curl -X POST 'https://api.neuroartist.ru/run/fal-ai/flux/dev?passthrough=1' \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -d '{"prompt":"…"}'
+```
+
+Возвращает оригинальные URL-ы провайдера (`https://fal.media/...`). Эти ссылки протухают через несколько часов — используйте только для отладки.
+
+### Timeout управления на клиенте
+
+Локальный HTTP-таймаут должен быть **больше 5 минут**, чтобы успеть поймать ответ. Рекомендация — 320 секунд:
+
+```js
+fetch(url, { ...init, signal: AbortSignal.timeout(320_000) })
+```
+
+```python
+requests.post(url, …, timeout=320)
+```
+
+### Идемпотентность
+
+`/run` не идемпотентен. Повтор того же запроса = вторая генерация = повторное списание. Если нужна идемпотентность — используйте `/queue` и сохраняйте `requestId` сами.

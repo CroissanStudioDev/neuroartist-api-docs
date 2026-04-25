@@ -1,0 +1,210 @@
+---
+title: /api/auth
+description: Better Auth ручки — sign-up/in/out, password reset, OAuth, API keys
+---
+
+# `/api/auth`
+
+Все эндпоинты под `/api/auth/*` обслуживаются [Better Auth](https://better-auth.com/) и работают с session cookies.
+
+## Email & Password
+
+### `POST /api/auth/sign-up/email`
+
+Регистрация по email + паролю.
+
+**Body:**
+
+```json
+{
+  "email": "you@example.com",
+  "password": "MyStrongPassword2026!",
+  "name": "Your Name"
+}
+```
+
+**Response 200:**
+
+```json
+{
+  "user": { "id": "u_…", "email": "…", "name": "…", "emailVerified": false },
+  "session": { "token": "…", "expiresAt": "…" }
+}
+```
+
+`Set-Cookie: better-auth.session_token=…; HttpOnly; Secure; SameSite=Lax`.
+
+После регистрации:
+- Начисляется welcome-бонус (`WELCOME_BONUS_RUB`, 50 ₽ по умолчанию).
+- Уходит письмо для подтверждения email (если SMTP настроен).
+
+**Rate limit:** 5 / 5 минут / IP.  
+**Errors:** `400 invalid_body`, `409 conflict` (email уже занят), `429 rate_limited`.
+
+### `POST /api/auth/sign-in/email`
+
+Вход.
+
+**Body:**
+
+```json
+{ "email": "you@example.com", "password": "…" }
+```
+
+**Response:** аналогично sign-up.
+
+**Rate limit:** 10 / 5 минут / IP.
+
+### `POST /api/auth/sign-out`
+
+Выход — удаляет session, инвалидирует cookie.
+
+**Response 200:** `{ "ok": true }`
+
+### `POST /api/auth/forgot-password/email`
+
+Запрос ссылки восстановления.
+
+**Body:**
+
+```json
+{ "email": "you@example.com" }
+```
+
+Шлёт письмо со ссылкой формата `https://gateway.neuroartist.ru/auth/reset-password?token=…`.
+
+**Rate limit:** 3 / 10 минут / IP.
+
+### `POST /api/auth/reset-password`
+
+Установка нового пароля.
+
+**Body:**
+
+```json
+{ "token": "…", "newPassword": "NewStrongPassword2026!" }
+```
+
+### `POST /api/auth/verify-email`
+
+Подтверждение email по токену из письма.
+
+**Body:**
+
+```json
+{ "token": "…" }
+```
+
+## Сессии
+
+### `GET /api/auth/get-session`
+
+Возвращает текущую сессию (или `null`, если нет cookie).
+
+**Response 200:**
+
+```json
+{
+  "user": { "id": "u_…", "email": "…", "name": "…", "role": "user" },
+  "session": { "token": "…", "expiresAt": "…", "createdAt": "…" }
+}
+```
+
+## OAuth — Yandex
+
+### `GET /api/auth/sign-in/social?provider=yandex`
+
+Редирект на Yandex OAuth.
+
+### `GET /api/auth/callback/yandex`
+
+Callback OAuth. Возвращает session cookie + редиректит на `redirect` параметр.
+
+## API ключи
+
+Все session-only.
+
+### `POST /api/auth/api-key/create`
+
+**Body:**
+
+```json
+{
+  "name": "Production server",
+  "expiresIn": 31536000
+}
+```
+
+`expiresIn` — секунд до истечения; `null` = без истечения.
+
+**Response 201:**
+
+```json
+{
+  "id": "key_abc",
+  "name": "Production server",
+  "key": "na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "prefix": "na_live_",
+  "start": "xxxx",
+  "expiresAt": "2027-04-25T00:00:00Z",
+  "createdAt": "2026-04-25T00:00:00Z"
+}
+```
+
+`key` показывается **один раз**.
+
+### `POST /api/auth/api-key/list`
+
+```json
+{ "keys": [ { "id": "key_abc", "name": "…", "start": "xxxx", "expiresAt": "…" } ] }
+```
+
+### `POST /api/auth/api-key/delete`
+
+**Body:** `{ "keyId": "key_abc" }`
+
+**Response 204.**
+
+<details>
+<summary>Альтернативные пути</summary>
+
+В UI и `/me/keys` тот же функционал зеркалирован под более удобными HTTP-методами:
+
+- `GET /me/keys` — list.
+- `POST /me/keys` — create.
+- `DELETE /me/keys/{id}` — revoke.
+- `PATCH /me/keys/{id}` — обновить (имя, monthly limit).
+
+См. [`/me`](/api/me).
+
+</details>
+
+## Admin (через session с `role=admin`)
+
+### `POST /api/auth/admin/list-users`
+
+Список пользователей. Только для админов.
+
+### `POST /api/auth/admin/set-role`
+
+```json
+{ "userId": "u_…", "role": "admin" }
+```
+
+Альтернативно — через `/admin/users/{id}` с PATCH (см. отдельный admin-API, не описанный в публичной спеке).
+
+## Agent Auth
+
+### `GET /api/auth/agent-configuration`
+
+Discovery endpoint для AI-агентов (alias `/.well-known/agent-configuration`).
+
+**Response:**
+
+```json
+{
+  "version": "1.0",
+  "auth": { "type": "api_key", "header": "Authorization", "scheme": "Bearer" },
+  "endpoints": { … }
+}
+```

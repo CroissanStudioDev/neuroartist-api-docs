@@ -1,0 +1,162 @@
+---
+title: Быстрый старт
+description: От регистрации до первой генерации за 5 минут
+---
+
+import { Steps, Tabs, Callout } from 'nextra/components'
+
+# Быстрый старт
+
+Цель — получить первую сгенерированную картинку через 5 минут. Ниже команды на `curl`, но всё то же самое работает из любого HTTP-клиента.
+
+<Callout type="info">
+  Базовый URL во всех примерах — `https://api.neuroartist.ru`. Замените на свой, если работаете в другом окружении.
+</Callout>
+
+<Steps>
+
+### Зарегистрируйте аккаунт
+
+Откройте дашборд `https://gateway.neuroartist.ru` и пройдите sign-up по email + паролю. Альтернативно — через API:
+
+```bash
+curl -X POST https://api.neuroartist.ru/api/auth/sign-up/email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "you@example.com",
+    "password": "MyStrongPassword2026!",
+    "name": "Your Name"
+  }'
+```
+
+Получите welcome-бонус (по умолчанию 50 ₽ в кредитах) — этого хватит на пару генераций для проверки.
+
+### Создайте API-ключ
+
+В дашборде: **Settings → API Keys → New Key**. Откроется модал с показом ключа **один раз** — сохраните его.
+
+Формат: `na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`. Префикс фиксированный, нагрузка — 32 символа.
+
+<Callout type="warning">
+  После закрытия модала восстановить ключ нельзя. Потеряли — создавайте новый и вешайте старый на удаление.
+</Callout>
+
+### Проверьте баланс
+
+```bash
+curl https://api.neuroartist.ru/me/balance \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+Ответ:
+
+```json
+{ "userId": "u_…", "balance": 50 }
+```
+
+`balance` — целое число кредитов, доступных к списанию.
+
+### Запустите первую генерацию
+
+Самый быстрый путь — синхронный `POST /run/{modelId}`. Запрос ждёт ответ до 5 минут, затем гарантированно отдаёт результат либо `requestId` для дополнения через `/queue`.
+
+<Tabs items={['curl', 'JavaScript (fetch)', 'Python (requests)']}>
+  <Tabs.Tab>
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "minimalist editorial portrait, monochrome, soft daylight",
+    "image_size": "portrait_4_3",
+    "num_inference_steps": 28
+  }'
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```js
+const resp = await fetch(
+  'https://api.neuroartist.ru/run/fal-ai/flux/dev',
+  {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.NA_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prompt: 'minimalist editorial portrait, monochrome, soft daylight',
+      image_size: 'portrait_4_3',
+      num_inference_steps: 28
+    })
+  }
+)
+const data = await resp.json()
+console.log(data.images[0].url)
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```python
+import os
+import requests
+
+resp = requests.post(
+    "https://api.neuroartist.ru/run/fal-ai/flux/dev",
+    headers={"Authorization": f"Bearer {os.environ['NA_API_KEY']}"},
+    json={
+        "prompt": "minimalist editorial portrait, monochrome, soft daylight",
+        "image_size": "portrait_4_3",
+        "num_inference_steps": 28,
+    },
+    timeout=320,
+)
+resp.raise_for_status()
+print(resp.json()["images"][0]["url"])
+```
+
+  </Tabs.Tab>
+</Tabs>
+
+Ответ:
+
+```json
+{
+  "images": [
+    {
+      "url": "https://s3.cloud.ru/neuroartist/.../result.webp",
+      "width": 768,
+      "height": 1024,
+      "content_type": "image/webp"
+    }
+  ],
+  "seed": 12345,
+  "timings": { "inference": 4.21 }
+}
+```
+
+URL ведёт на наш S3-rehost. Срок жизни ссылки — пока вы не удалите её через `/me/activity`.
+
+### Готово
+
+Дальше — что есть смысл изучить:
+
+- **[Async режим](/guides/async-generation)** — submit + SSE-прогресс. Удобнее для длинных генераций (видео, batched image-to-image).
+- **[Аутентификация](/concepts/authentication)** — как устроены сессия и API-ключи, лимиты по ключу.
+- **[Биллинг](/concepts/billing)** — top-up, авто-пополнение, чеки YooKassa.
+- **[Каталог моделей](/api/models)** — список, фильтры, schema.
+
+</Steps>
+
+## Что делать, если…
+
+| Симптом | Причина | Куда смотреть |
+| --- | --- | --- |
+| `401 unauthorized` | Ключ невалиден или просрочен | Создайте новый в дашборде |
+| `402 insufficient_balance` | Недостаточно кредитов | Top-up в [/billing](/api/billing) или дашборде |
+| `404 unknown_model` | Опечатка в `modelId` | Сверьте с `GET /models` |
+| `429 rate_limited` | Превышен лимит на ключ или IP | См. [Лимиты](/concepts/rate-limits), `Retry-After` в headers |
+| `503 provider_error` | Upstream-провайдер не отвечает | Circuit breaker — повторите через `Retry-After` секунд |

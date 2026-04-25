@@ -1,0 +1,117 @@
+---
+title: /billing
+description: Top-up через YooKassa, платежи, чеки
+---
+
+# `/billing`
+
+Top-up и работа с платежами. YooKassa — единственный провайдер.
+
+## `POST /billing/topup`
+
+Создать платёж на пополнение.
+
+**Auth: session-only.** Из API-ключа top-up создать нельзя.
+
+**Body:**
+
+```json
+{
+  "amountRub": 1000,
+  "returnUrl": "https://gateway.neuroartist.ru/billing"
+}
+```
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `amountRub` | int | Сумма в рублях. Минимум — `MIN_TOPUP_RUB` (default 500). |
+| `returnUrl` | string | Куда YooKassa редиректит после оплаты. |
+
+**Response 201:**
+
+```json
+{
+  "payment": {
+    "id": "pay_abc",
+    "yookassaId": "2c…",
+    "status": "pending",
+    "creditsToGrant": 1000,
+    "amountKopecks": 100000,
+    "currency": "RUB",
+    "description": "Пополнение баланса Neuroartist",
+    "createdAt": "…"
+  },
+  "confirmationUrl": "https://yoomoney.ru/checkout/payments/v2/contract?…"
+}
+```
+
+Перенаправьте пользователя на `confirmationUrl`. Зачисление происходит автоматически по webhook от YooKassa в 1–5 секунд после оплаты.
+
+**Errors:**
+
+- `400 minimum_topup` — `amountRub < MIN_TOPUP_RUB`.
+- `403 session_only`.
+- `502 yookassa_error` — YooKassa временно недоступна.
+
+## `GET /billing/payments`
+
+Список платежей.
+
+**Query:** `limit`, `offset`.
+
+```json
+{
+  "items": [
+    {
+      "id": "pay_abc",
+      "yookassaId": "2c…",
+      "status": "succeeded",
+      "creditsToGrant": 1000,
+      "amountKopecks": 100000,
+      "currency": "RUB",
+      "description": "…",
+      "createdAt": "…"
+    }
+  ],
+  "total": 12,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+`status` ∈ {`pending`, `waiting_for_capture`, `succeeded`, `canceled`}.
+
+## `GET /billing/payments/{id}`
+
+Детали платежа.
+
+```json
+{
+  "payment": {
+    "id": "pay_abc",
+    "yookassaId": "2c…",
+    "status": "succeeded",
+    "creditsToGrant": 1000,
+    "amountKopecks": 100000,
+    "currency": "RUB",
+    "description": "…",
+    "createdAt": "…",
+    "succeededAt": "…",
+    "paymentMethod": { "id": "pm_abc", "mask": "•••• 4242", "type": "bank_card" },
+    "receiptUrl": "https://yookassa.ru/receipts/…"
+  }
+}
+```
+
+## `GET /billing/payments/{id}/receipt`
+
+**session-only**
+
+302-редирект на чек YooKassa.
+
+```bash
+curl -L https://api.neuroartist.ru/billing/payments/pay_abc/receipt -b cookies.txt
+# 302 → https://yookassa.ru/receipts/…
+```
+
+**Errors:** `404 not_found` / `404 no_receipt` (платёж не succeeded или чек не оформлен), `403 session_only`.

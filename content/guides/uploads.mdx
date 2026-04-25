@@ -1,0 +1,186 @@
+---
+title: Загрузка файлов
+description: Передача input-картинок и видео для image-to-image / video-to-video моделей
+---
+
+import { Tabs, Callout, Steps } from 'nextra/components'
+
+# Загрузка файлов
+
+Многие модели принимают на вход URL картинки или видео (img2img, video2video, voice-clone). Чтобы передать им свой файл, его нужно сначала загрузить в gateway.
+
+## Когда нужно
+
+- `image-to-image` — `image_url` указывает на ваш input.
+- `video-to-video` — `video_url`.
+- `voice-cloning`, `audio-driven-video` — `audio_url`, `reference_voice_url`.
+
+В schema модели поля типа `*_url` — кандидаты под uploaded asset.
+
+## Эндпоинт
+
+```
+POST /me/uploads
+Content-Type: multipart/form-data
+Field: file
+```
+
+<Callout type="info">
+  Эта ручка — **session-only**. Серверный код через API-ключ к ней обратиться не может. Если у вас серверный пайплайн без сессии — поднимите свой временный URL для файла либо обратитесь к команде для расширения функциональности.
+</Callout>
+
+## Лимиты
+
+| Параметр | Значение |
+| --- | --- |
+| Максимальный размер | `MAX_UPLOAD_BYTES` (10 MiB по умолчанию) |
+| Image MIME | `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif` |
+| Video MIME | `video/mp4`, `video/quicktime`, `video/webm` |
+| Audio MIME | `audio/mpeg`, `audio/mp3`, `audio/wav`, `audio/wave`, `audio/x-wav`, `audio/webm`, `audio/mp4`, `audio/ogg`, `audio/flac` |
+
+Превышение размера → `413 asset_too_large`. Неподдерживаемый MIME → `415 unsupported_mime`.
+
+## Пример
+
+<Tabs items={['curl', 'JavaScript (browser)', 'JavaScript (Node)']}>
+  <Tabs.Tab>
+
+```bash
+curl -X POST https://api.neuroartist.ru/me/uploads \
+  -b cookies.txt \
+  -F "file=@/path/to/photo.jpg"
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```js
+// В браузере с активной сессией
+async function upload(file) {
+  const form = new FormData()
+  form.append('file', file)
+
+  const resp = await fetch(
+    'https://api.neuroartist.ru/me/uploads',
+    { method: 'POST', credentials: 'include', body: form }
+  )
+
+  if (!resp.ok) {
+    const err = await resp.json()
+    throw new Error(`${resp.status} ${err.code}`)
+  }
+
+  return resp.json()
+}
+
+const input = document.querySelector('input[type=file]')
+const { url, assetId } = await upload(input.files[0])
+console.log(url)  // https://s3.cloud.ru/neuroartist/uploads/…
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```js
+import fs from 'node:fs'
+import path from 'node:path'
+
+async function upload(filePath) {
+  const file = fs.readFileSync(filePath)
+  const form = new FormData()
+  form.append(
+    'file',
+    new Blob([file], { type: 'image/jpeg' }),
+    path.basename(filePath)
+  )
+
+  const resp = await fetch(
+    'https://api.neuroartist.ru/me/uploads',
+    { method: 'POST', headers: { Cookie: SESSION_COOKIE }, body: form }
+  )
+  return resp.json()
+}
+```
+
+  </Tabs.Tab>
+</Tabs>
+
+## Ответ
+
+```json
+{
+  "assetId": "asset_abc123",
+  "url": "https://s3.cloud.ru/neuroartist/uploads/u_…/asset_abc123.jpg",
+  "contentType": "image/jpeg",
+  "sizeBytes": 487123
+}
+```
+
+`url` — публичная HTTPS-ссылка. Используйте её прямо в input моделей:
+
+```bash
+curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev/image-to-image \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "make it watercolor",
+    "image_url": "https://s3.cloud.ru/neuroartist/uploads/u_…/asset_abc123.jpg",
+    "strength": 0.65
+  }'
+```
+
+## Как организовать в UI
+
+```js
+function ImageToImage() {
+  const [uploadedUrl, setUploadedUrl] = useState(null)
+
+  async function handleFileChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const { url } = await upload(file)
+    setUploadedUrl(url)
+  }
+
+  async function handleGenerate() {
+    if (!uploadedUrl) return
+    const result = await fetch('https://api.neuroartist.ru/run/fal-ai/flux/dev/image-to-image', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: '…', image_url: uploadedUrl })
+    }).then(r => r.json())
+    // …
+  }
+
+  return (/* JSX */)
+}
+```
+
+## Время жизни и удаление
+
+Загруженные файлы хранятся в нашем S3 пока вы их не удалите. Для удаления — UI в дашборде или администратор-side. Если очень нужно программно — обратитесь к команде, добавим эндпоинт.
+
+## Что если S3 не сконфигурирован
+
+В local-dev окружении без S3 ручка вернёт:
+
+```http
+HTTP/1.1 503 Service Unavailable
+{"code":"storage_disabled","message":"Asset storage is not configured"}
+```
+
+В production это никогда не должно произойти. Если возникает — `X-Request-ID` в поддержку.
+
+## Альтернатива — внешние URL
+
+Если у вас уже есть публичный URL с CORS и стабильной доступностью (например, ваш CDN), его можно подсовывать в input модели **без** загрузки в gateway. Всё равно gateway после генерации re-hostит **результат** в наш S3.
+
+```json
+{
+  "image_url": "https://your-cdn.example.com/photos/photo.jpg",
+  "prompt": "watercolor"
+}
+```
+
+Но риск тут на вас — если внешний URL отвалится во время генерации, упадёт `provider_error`.

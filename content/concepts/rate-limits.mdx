@@ -1,0 +1,122 @@
+---
+title: Rate limits
+description: Лимиты запросов — IP, per-user, per-key
+---
+
+import { Callout } from 'nextra/components'
+
+# Rate limits
+
+Все лимиты в gateway — sliding window поверх Redis. Превышение возвращает `429 Too Many Requests` с заголовками:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1714050300
+Retry-After: 47
+```
+
+## По IP-адресу
+
+Для auth-ручек, чтобы не давать брутфорс:
+
+| Эндпоинт | Лимит | Окно |
+| --- | --- | --- |
+| `POST /api/auth/sign-in/email` | 10 запросов | 5 минут |
+| `POST /api/auth/sign-up/email` | 5 запросов | 5 минут |
+| `POST /api/auth/forgot-password/email` | 3 запроса | 10 минут |
+| `POST /webhooks/*` | 100 запросов | 1 минута |
+
+Клиентам этих лимитов хватает с запасом — упрётесь только при автоматизированной атаке.
+
+## По пользователю (генерации)
+
+```
+USER_GENERATION_LIMIT_PER_HOUR (default 100)
+```
+
+Применяется на:
+
+- `POST /run/{modelId}`
+- `POST /queue/{modelId}`
+- `POST /integrations/yourtunes(-edit)`
+
+Шапка `X-RateLimit-Remaining` показывает, сколько submit-ов у вас в текущем часе. Лимит общий — не по моделям и не по ключам.
+
+## По API-ключу
+
+Better Auth накидывает свой лимит:
+
+```
+1000 запросов / час на ключ (любые ручки)
+```
+
+Этот предел стоит выше per-user limit на генерации, поэтому вы скорее упрётесь в `USER_GENERATION_LIMIT_PER_HOUR` чем в этот.
+
+### Месячный финансовый лимит
+
+Через `PATCH /me/keys/{id}` можно поставить:
+
+```json
+{ "metadata": { "monthlyLimitRub": 5000 } }
+```
+
+Это ограничение на **сумму расходов** этого ключа в текущем календарном месяце. Превышение → `429 key_limit_exceeded`. Сбрасывается 1 числа.
+
+Используйте, чтобы:
+
+- Ограничить ключ для интеграции (не больше N ₽/мес).
+- Защитить production от непредвиденного расхода.
+- Дать sandbox-ключ с маленьким лимитом для тестов.
+
+## SSE-соединения
+
+```
+SSE_MAX_CONNECTIONS_PER_USER (default 5)
+```
+
+Максимум одновременных открытых стримов на одного юзера. Подробнее — [SSE](/concepts/sse#лимит-соединений-на-пользователя).
+
+## Заголовки в ответе
+
+Все лимиты возвращают одинаковый набор заголовков:
+
+| Заголовок | Значение |
+| --- | --- |
+| `X-RateLimit-Limit` | Лимит для текущего scope |
+| `X-RateLimit-Remaining` | Сколько осталось до конца окна |
+| `X-RateLimit-Reset` | Unix-timestamp следующего сброса |
+| `Retry-After` | Секунд до возможной повторной попытки (только при 429) |
+
+Заголовки выставляются в CORS expose-list, поэтому видны из браузера.
+
+## Стратегия retry
+
+```js
+async function callWithRetry(url, init, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const resp = await fetch(url, init)
+    if (resp.status !== 429 && resp.status !== 503) return resp
+    if (attempt === maxRetries) return resp
+
+    const retryAfter = Number(resp.headers.get('Retry-After')) || 1
+    await new Promise(r => setTimeout(r, retryAfter * 1000))
+  }
+}
+```
+
+<Callout type="info">
+  `503 provider_error` тоже отдаёт `Retry-After`. Эту ситуацию создаёт circuit breaker — верхняя fal-инфра флапает, gateway не пускает запросы дальше. Подождите указанное число секунд и повторите.
+</Callout>
+
+## Что НЕ ограничено
+
+- `GET /models`, `GET /me/balance`, `GET /me/transactions` — без отдельного лимита (только глобальные API-ключевые 1000/час).
+- `GET /docs`, `/openapi.json`, `/llms.txt` — публичные read-only.
+- SSE-стримы (соединения) — но количество одновременных лимитировано, см. выше.
+
+## Как обойти лимиты, если упёрлись
+
+- **Per-user generation:** ограничение операционное; если 100/час действительно мешает — напишите команде, поднимем для аккаунта.
+- **Monthly key limit:** правьте через UI или `PATCH /me/keys/{id}`.
+- **Auth IP limit:** обычно срабатывает только при ошибках интеграции. Проверьте логи — скорее всего, бесконечный sign-in loop.

@@ -1,0 +1,382 @@
+---
+title: /me
+description: Профиль, баланс, ключи, активность
+---
+
+# `/me`
+
+Все эндпоинты требуют аутентификации. Часть — только session-cookie (не API-ключ); они помечены как **session-only**.
+
+## Профиль
+
+### `GET /me`
+
+Текущий пользователь + источник аутентификации.
+
+```json
+{
+  "user": {
+    "id": "u_abc",
+    "email": "you@example.com",
+    "name": "You",
+    "image": null,
+    "role": "user",
+    "createdAt": "…"
+  },
+  "auth": { "source": "apiKey", "apiKeyId": "key_abc" }
+}
+```
+
+`auth.source` — `"session"` либо `"apiKey"`.
+
+### `PATCH /me`
+
+**session-only**
+
+```json
+{
+  "name": "New name",
+  "image": "https://…",
+  "lowBalanceEmailOptOut": true
+}
+```
+
+**Response 200:** `{ "user": { … } }`
+
+## Сессии
+
+### `GET /me/sessions`
+
+**session-only**
+
+```json
+{
+  "sessions": [
+    { "id": "sess_abc", "token": "…", "createdAt": "…", "expiresAt": "…", "userAgent": "Mozilla/…" }
+  ]
+}
+```
+
+### `DELETE /me/sessions/{id}`
+
+**session-only**
+
+Ревокирует сессию. Response 204.
+
+## Баланс
+
+### `GET /me/balance`
+
+```json
+{ "userId": "u_abc", "balance": 248 }
+```
+
+### `GET /me/transactions`
+
+**Query:**
+
+| Параметр | Тип |
+| --- | --- |
+| `type` | `topup` / `deduct` / `refund` / `grant` |
+| `limit` | int (default 50) |
+| `offset` | int (default 0) |
+
+**Response:**
+
+```json
+{
+  "items": [
+    {
+      "id": "tx_abc",
+      "userId": "u_abc",
+      "type": "deduct",
+      "amount": -8,
+      "description": "fal-ai/flux/dev",
+      "createdAt": "…"
+    }
+  ],
+  "total": 142,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+`amount` — со знаком: `+` для пополнения и грантов, `−` для списаний.
+
+## Аналитика
+
+### `GET /me/usage`
+
+Снимок расходов по окнам.
+
+**Query:** `windows=5h,24h,7d,30d` (default — все четыре).
+
+```json
+{
+  "balance": 248,
+  "windows": [
+    {
+      "window": "24h",
+      "credits": 156,
+      "count": 23,
+      "byModel": [ { "modelId": "fal-ai/flux/dev", "credits": 120, "count": 18 } ]
+    }
+  ]
+}
+```
+
+### `GET /me/usage/history`
+
+Time-series.
+
+**Query:**
+
+| Параметр | Описание |
+| --- | --- |
+| `from` | ISO 8601 timestamp |
+| `to` | ISO 8601 timestamp |
+| `granularity` | `hour` / `day` |
+
+```json
+{
+  "granularity": "day",
+  "from": "2026-04-01T00:00:00Z",
+  "to": "2026-04-12T00:00:00Z",
+  "series": [ { "bucket": "2026-04-01T00:00:00Z", "credits": 24, "count": 4 } ]
+}
+```
+
+### `GET /me/usage/by-model`
+
+Расход по моделям за rolling-window.
+
+**Query:** `window=5h|24h|7d|30d`.
+
+```json
+{
+  "window": "24h",
+  "items": [ { "modelId": "fal-ai/flux/dev", "credits": 120, "count": 18 } ]
+}
+```
+
+### `GET /me/usage/by-key`
+
+Расход по API-ключам (исключает session-расходы).
+
+**Query:** `window=5h|24h|7d|30d`.
+
+```json
+{
+  "window": "24h",
+  "items": [
+    {
+      "keyId": "key_abc",
+      "keyName": "Production server",
+      "partialKey": "na_live_xxxx****",
+      "credits": 96,
+      "count": 14
+    }
+  ]
+}
+```
+
+## Активность
+
+### `GET /me/activity`
+
+Лента запросов (submit / status / result / cancel / stream).
+
+**Query:**
+
+| Параметр | Тип |
+| --- | --- |
+| `modelId` | string |
+| `apiKeyId` | string |
+| `operation` | `submit` / `status` / `result` / `cancel` / `stream` |
+| `status` | `IN_QUEUE` / `IN_PROGRESS` / `COMPLETED` / `FAILED` / `CANCELLED` |
+| `limit` | int |
+| `offset` | int |
+
+**Response:**
+
+```json
+{
+  "items": [
+    {
+      "falRequestId": "req_abc",
+      "modelId": "fal-ai/flux/dev",
+      "operation": "submit",
+      "status": "COMPLETED",
+      "credits": 8,
+      "durationMs": 4210,
+      "createdAt": "…",
+      "errorCode": null,
+      "metadata": {}
+    }
+  ],
+  "total": 142,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### `GET /me/activity/{requestId}`
+
+Детали одного реквеста + assets.
+
+```json
+{
+  "record": { "falRequestId": "req_abc", "modelId": "fal-ai/flux/dev", "operation": "submit", "status": "COMPLETED", "credits": 8, "durationMs": 4210, "createdAt": "…" },
+  "assets": [
+    { "assetId": "asset_…", "url": "https://s3.cloud.ru/…", "contentType": "image/webp", "sizeBytes": 487123 }
+  ]
+}
+```
+
+## API ключи
+
+### `GET /me/keys`
+
+**session-only**
+
+```json
+{
+  "keys": [
+    {
+      "id": "key_abc",
+      "name": "Production server",
+      "prefix": "na_live_",
+      "start": "xxxx",
+      "expiresAt": "…",
+      "createdAt": "…",
+      "lifetimeCostRub": 124
+    }
+  ]
+}
+```
+
+### `POST /me/keys`
+
+**session-only**
+
+**Body:**
+
+```json
+{ "name": "New key", "expiresIn": 31536000 }
+```
+
+**Response 201:** содержит `key` **один раз**.
+
+```json
+{
+  "id": "key_xyz",
+  "name": "New key",
+  "key": "na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "prefix": "na_live_",
+  "start": "xxxx",
+  "expiresAt": "…",
+  "createdAt": "…"
+}
+```
+
+### `PATCH /me/keys/{id}`
+
+**session-only**
+
+**Body:**
+
+```json
+{
+  "name": "Renamed",
+  "metadata": { "monthlyLimitRub": 5000 }
+}
+```
+
+`monthlyLimitRub`: `null` снимает лимит, число — потолок расходов на ключ в текущем месяце.
+
+### `DELETE /me/keys/{id}`
+
+**session-only**
+
+Response 204.
+
+## Сохранённые карты
+
+### `GET /me/payment-methods`
+
+```json
+{
+  "methods": [
+    { "id": "pm_abc", "mask": "•••• 4242", "type": "bank_card", "default": true, "createdAt": "…" }
+  ]
+}
+```
+
+### `POST /me/payment-methods/{id}/default`
+
+**session-only**
+
+Сделать карту default.
+
+### `DELETE /me/payment-methods/{id}`
+
+**session-only**
+
+Удалить карту. Response 204.
+
+## Auto-topup
+
+### `PATCH /me/auto-topup`
+
+**session-only**
+
+**Body:**
+
+```json
+{ "enabled": true, "thresholdRub": 200, "amountRub": 1000 }
+```
+
+Подробнее — [Гайд](/guides/auto-topup).
+
+## Webhook secret
+
+### `GET /me/webhook-secret`
+
+**session-only**
+
+```json
+{ "secret": "wsec_…" }   // или null, если ещё не создан
+```
+
+### `POST /me/webhook-secret/rotate`
+
+**session-only**
+
+```json
+{ "newSecret": "wsec_…" }
+```
+
+Показывается **один раз**.
+
+## Загрузки
+
+### `POST /me/uploads`
+
+**session-only**
+
+`multipart/form-data`, поле `file`.
+
+**Response 201:**
+
+```json
+{
+  "assetId": "asset_abc",
+  "url": "https://s3.cloud.ru/neuroartist/uploads/u_…/asset_abc.jpg",
+  "contentType": "image/jpeg",
+  "sizeBytes": 487123
+}
+```
+
+**Errors:** `413 asset_too_large`, `415 unsupported_mime`, `503 storage_disabled`.
+
+См. [Гайд](/guides/uploads).

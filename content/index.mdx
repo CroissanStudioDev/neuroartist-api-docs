@@ -5,20 +5,51 @@ asIndexPage: true
 
 # Neuroartist API Gateway
 
-Документация публичного developer-API gateway Neuroartist: каталог моделей, биллинг, аутентификация (session + API-key), SSE-стрим прогресса генераций.
+**Neuroartist API Gateway** — публичный developer-API над генеративными моделями (image / video / audio / multimodal). Один HTTPS-эндпоинт, кредитный биллинг, прозрачный SSE-прогресс генераций и хранение результатов в нашем S3.
 
-## Быстрый старт
+Под капотом — fal.ai и другие провайдеры, но вашему коду этого знать не нужно: каталог моделей, формат запросов и формат ответа стабильны.
 
-```bash
-curl -X POST https://gateway.neuroartist.ru/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"...","name":"You"}'
-```
+## Что вы получаете
 
-После входа — создайте API-ключ в дашборде и используйте его в заголовке `Authorization: Bearer na_live_...`.
+- **Единая аутентификация.** Cookie-сессия для дашборда, API-ключи (`na_live_…`) для серверного кода. Один токен — оба пути.
+- **Каталог моделей.** Текущие версии fal.ai с RU-описаниями и стабильной ценой в кредитах.
+- **Sync и async режимы.** `POST /run/{modelId}` — синхронно, `POST /queue/{modelId}` + SSE — асинхронно с прогрессом.
+- **Биллинг в кредитах.** 1 кредит ≈ 1 ₽. Top-up через YooKassa, авто-пополнение по порогу, чеки.
+- **Re-hosting артефактов.** Все картинки/видео переезжают из CDN провайдера в наш S3 — ссылки не протухают.
+- **Webhooks.** Регистрируете URL → получаете подписанные (Svix-style) callbacks вместо опроса.
+- **OpenAPI 3.1 + Scalar UI.** Машинно читаемая спецификация (RU и EN) на `/openapi.json`, `/docs`, `/llms.txt`.
 
-## Что дальше
+## Как читать эту документацию
 
-- Каталог моделей и playground.
-- Submit-запросы и SSE-стрим прогресса.
-- Биллинг и автопополнение через YooKassa.
+import { Cards } from 'nextra/components'
+
+<Cards num={2}>
+  <Cards.Card title="Быстрый старт" href="/quickstart" arrow>
+    Регистрация, ключ, первая генерация — за 5 минут.
+  </Cards.Card>
+  <Cards.Card title="Основы" href="/concepts" arrow>
+    Аутентификация, биллинг, SSE, webhooks, лимиты, ошибки.
+  </Cards.Card>
+  <Cards.Card title="Гайды" href="/guides" arrow>
+    Sync/async генерации, загрузка файлов, авто-пополнение, приём webhooks.
+  </Cards.Card>
+  <Cards.Card title="API Reference" href="/api" arrow>
+    Полный список ручек: путь, тело, ответ, коды ошибок.
+  </Cards.Card>
+</Cards>
+
+## Базовый URL
+
+| Окружение | URL |
+| --- | --- |
+| Production | `https://api.neuroartist.ru` |
+| Staging | `https://staging.neuroartist.ru` |
+| Local dev | `http://localhost:8000` |
+
+Все примеры далее используют production-URL. Замените на ваш при локальной разработке.
+
+## Поддержка
+
+- Issue в репозитории gateway.
+- Email команды (см. дашборд).
+- Логи запросов и активности — `/me/activity` (UI и API).

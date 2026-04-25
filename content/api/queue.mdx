@@ -1,0 +1,158 @@
+---
+title: /queue
+description: Async-генерация — submit, status, result, SSE, cancel
+---
+
+import { Callout } from 'nextra/components'
+
+# `/queue`
+
+Async-режим: submit возвращает `requestId` сразу, terminal-состояние получаете через polling, SSE или webhook.
+
+Концептуальный гайд — [Async + SSE](/guides/async-generation).
+
+## `POST /queue/{modelId}`
+
+Submit задачу.
+
+**Auth:** API-key или session.  
+**Path:** `modelId` (со слешами, без URL-кодирования).  
+**Query:**
+
+| Параметр | Описание |
+| --- | --- |
+| `webhook` | URL для callback после завершения |
+
+**Body:** input модели.
+
+```bash
+curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/api/cb' \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"editorial portrait"}'
+```
+
+**Response 200:**
+
+```json
+{
+  "requestId": "req_abc",
+  "status": "IN_QUEUE",
+  "queuePosition": 1
+}
+```
+
+`status` ∈ {`IN_QUEUE`, `IN_PROGRESS`} — провайдер уже начал, или ещё в очереди.
+
+**Errors:** см. `/run` — те же.
+
+## `GET /queue/{modelId}/requests/{requestId}/status`
+
+Опрос статуса (без полного payload).
+
+**Query:** `logs=1` (опционально) — добавить логи провайдера.
+
+**Response 200:**
+
+```json
+{
+  "request_id": "req_abc",
+  "status": "IN_PROGRESS",
+  "queue_position": 0,
+  "logs": [ { "level": "info", "message": "Loading model", "timestamp": "…" } ]
+}
+```
+
+`status` ∈ {`IN_QUEUE`, `IN_PROGRESS`, `COMPLETED`, `FAILED`}.
+
+**Errors:** `404 not_found` (или `not_owned`).
+
+## `GET /queue/{modelId}/requests/{requestId}/status/stream`
+
+SSE с raw-статусом провайдера.
+
+```
+data: {"status":"IN_PROGRESS","logs":[…]}
+
+data: {"status":"COMPLETED","request_id":"req_abc"}
+
+```
+
+Закрывается после terminal-состояния. Heartbeat каждые 15 сек (`: ping`).
+
+Используйте `progress/stream` ниже — он унифицированный и удобнее.
+
+## `GET /queue/{modelId}/requests/{requestId}/progress/stream`
+
+Унифицированный SSE — lifecycle gateway-а.
+
+```
+data: {"stage":"queued","requestId":"req_abc","timestamp":"…"}
+
+data: {"stage":"in_progress","requestId":"req_abc","timestamp":"…","payload":{…}}
+
+data: {"stage":"uploading_assets","requestId":"req_abc","timestamp":"…"}
+
+data: {"stage":"completed","requestId":"req_abc","timestamp":"…","result":{…}}
+
+```
+
+Стадии: `queued` → `in_progress` → `uploading_assets` → `reconciling` → `completed` | `failed`.
+
+Late-join — поддерживается. Подключение после terminal-стадии сразу отдаст последнее событие.
+
+**Лимит:** `SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5). Превышение — `429 too_many_sse_connections`.
+
+Подробнее — [Concepts → SSE](/concepts/sse).
+
+## `GET /queue/{modelId}/requests/{requestId}`
+
+Забрать результат (после `COMPLETED`).
+
+**Query:** `passthrough=1` — оригинальные URL-ы провайдера без re-host в S3.
+
+**Response 200:**
+
+```json
+{
+  "request_id": "req_abc",
+  "images": [
+    { "url": "https://s3.cloud.ru/…", "width": 768, "height": 1024, "content_type": "image/webp" }
+  ],
+  "seed": 12345,
+  "timings": { "inference": 4.21 }
+}
+```
+
+Можно вызывать **многократно** — payload сохраняется в БД.
+
+**Errors:** `404 not_found` (если не COMPLETED ещё) либо `not_owned`.
+
+## `PUT /queue/{modelId}/requests/{requestId}/cancel`
+
+Отменить незавершённую генерацию.
+
+**Response 200:**
+
+```json
+{ "ok": true, "status": "CANCELLED" }
+```
+
+Кредиты возвращаются (refund-транзакция).
+
+**Errors:** `404 not_found` (если уже завершилась — отмена бессмысленна).
+
+## Поведение IDOR
+
+Все ручки `/{requestId}/*` проверяют, что реквест принадлежит вам. Чужие реквесты вернут `404 not_found` — мы намеренно не различаем «нет такого» и «есть, но не ваш», чтобы не дать перебирать ID.
+
+## Streamline для serverless
+
+Если ваш runtime не любит долгие SSE (Cloudflare Workers, Vercel Edge с лимитом 30 сек) — используйте **webhook**:
+
+```bash
+curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
+  ...
+```
+
+После terminal-состояния gateway POST-ит JSON на ваш URL. Подробнее — [Webhooks](/concepts/webhooks).

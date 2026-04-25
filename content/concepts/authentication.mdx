@@ -1,0 +1,170 @@
+---
+title: Аутентификация
+description: Cookie-сессия и API-ключи — два пути к одному gateway
+---
+
+import { Callout, Tabs } from 'nextra/components'
+
+# Аутентификация
+
+Gateway умеет два типа аутентификации; защищённые ручки принимают **любой** из них:
+
+| Способ | Заголовок | Когда использовать |
+| --- | --- | --- |
+| Session cookie | `Cookie: better-auth.session_token=…` | Браузер, дашборд, серверный код в той же зоне cookies |
+| API-ключ | `Authorization: Bearer na_live_…` или `x-api-key: na_live_…` | Server-to-server, CLI, бэкенд интеграции |
+
+Часть административных ручек принимает **только** session — это намеренный barrier против утечки API-ключа админа.
+
+## Session cookie
+
+Сессии управляются [Better Auth](https://better-auth.com/). Полный список ручек смонтирован под `/api/auth/*`.
+
+### Регистрация
+
+```bash
+curl -X POST https://api.neuroartist.ru/api/auth/sign-up/email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "you@example.com",
+    "password": "MyStrongPassword2026!",
+    "name": "Your Name"
+  }'
+```
+
+Ответ — `Set-Cookie: better-auth.session_token=…; HttpOnly; Secure; SameSite=Lax`. Сохраните cookie-jar (`-c` / `-b` у curl) и вы войдёте автоматически.
+
+После регистрации начисляется welcome-бонус (`WELCOME_BONUS_RUB`, по умолчанию 50 ₽).
+
+### Вход
+
+```bash
+curl -X POST https://api.neuroartist.ru/api/auth/sign-in/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"…"}' \
+  -c cookies.txt
+```
+
+### Выход
+
+```bash
+curl -X POST https://api.neuroartist.ru/api/auth/sign-out -b cookies.txt
+```
+
+### Восстановление пароля
+
+```bash
+# 1. Запросить письмо с reset-ссылкой
+curl -X POST https://api.neuroartist.ru/api/auth/forgot-password/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com"}'
+
+# 2. Установить новый пароль (token из письма)
+curl -X POST https://api.neuroartist.ru/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"token":"…","newPassword":"NewStrongPassword2026!"}'
+```
+
+### OAuth (Yandex)
+
+Подключён через `genericOAuth`. Запустите редирект:
+
+```
+GET https://api.neuroartist.ru/api/auth/sign-in/social?provider=yandex
+```
+
+Callback приходит на `/api/auth/callback/yandex`. Yandex-аккаунт связывается с email или создаёт новый user.
+
+## API-ключи
+
+Ключи живут в формате `na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (префикс зарезервирован, нагрузка — 32 случайных символа).
+
+### Создание
+
+```bash
+curl -X POST https://api.neuroartist.ru/api/auth/api-key/create \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Production server","expiresIn":31536000}' \
+  -b cookies.txt
+```
+
+Ответ показывает `key` **один раз**:
+
+```json
+{
+  "id": "key_abc123",
+  "name": "Production server",
+  "key": "na_live_xxxxxxxxxxxxxxxx",
+  "prefix": "na_live_",
+  "start": "xxxx",
+  "expiresAt": "2027-04-25T00:00:00Z",
+  "createdAt": "2026-04-25T00:00:00Z"
+}
+```
+
+Альтернатива — UI: **Settings → API Keys → New Key**.
+
+### Использование
+
+<Tabs items={['Authorization (рекомендуется)', 'x-api-key']}>
+  <Tabs.Tab>
+
+```bash
+curl https://api.neuroartist.ru/me \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+```bash
+curl https://api.neuroartist.ru/me \
+  -H "x-api-key: na_live_xxxxxxxxxxxxxxxx"
+```
+
+  </Tabs.Tab>
+</Tabs>
+
+### Управление
+
+| Действие | Ручка |
+| --- | --- |
+| Список ключей | `GET /me/keys` |
+| Создание | `POST /me/keys` |
+| Обновление имени / месячного лимита | `PATCH /me/keys/{id}` |
+| Удаление | `DELETE /me/keys/{id}` |
+
+Все эти операции — **session-only**. Подробнее в [API → Me](/api/me).
+
+### Месячный лимит на ключ
+
+Через `PATCH /me/keys/{id}` можно поставить `metadata.monthlyLimitRub` — потолок расходов в рублях на calendar-месяц. Превышение возвращает `429 key_limit_exceeded` без затрагивания общего баланса юзера.
+
+## Кто я сейчас
+
+Универсальная ручка для проверки auth-состояния:
+
+```bash
+curl https://api.neuroartist.ru/me \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+```json
+{
+  "user": { "id": "u_…", "email": "you@example.com", "name": "You", "role": "user" },
+  "auth": { "source": "apiKey", "apiKeyId": "key_abc123" }
+}
+```
+
+Поле `auth.source` — `"session"` или `"apiKey"`. Полезно для отладки, какой именно путь auth ловит запросы.
+
+## Безопасность
+
+<Callout type="warning">
+  Никогда не публикуйте API-ключи. Они дают полный доступ к балансу и активности аккаунта.
+</Callout>
+
+- Храните ключи в секрет-стораджах (`.env`, AWS Secrets Manager, Vault). Не коммитьте в репо.
+- Заведите отдельный ключ под каждое окружение (`prod`, `staging`, `local`) — облегчает ротацию.
+- При утечке: `DELETE /me/keys/{id}` сразу + создайте новый.
+- Active sessions (`GET /me/sessions`) можно ревокать по одной — `DELETE /me/sessions/{id}`.

@@ -1,0 +1,198 @@
+---
+title: Биллинг и кредиты
+description: Как устроены кредиты, top-up, авто-пополнение и чеки
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# Биллинг и кредиты
+
+## Кредитная модель
+
+Внутри gateway всё считается в **кредитах**. 1 кредит ≈ 1 ₽. Целочисленный — без копеек.
+
+- **Списание** происходит атомарно при `POST /run` или `POST /queue/{modelId}`. Если баланса не хватает — ответ `402 insufficient_balance`, **запрос провайдеру не уходит**.
+- **Возврат** — если submit упал на стороне провайдера (5xx, таймаут, отказ), gateway автоматически возвращает кредиты в баланс.
+- **Reconciliation** — после завершения генерации списание корректируется по фактическому usage (часть моделей считает по секундам/мегапикселям).
+
+Все движения видны в `GET /me/transactions` с типами `topup`, `deduct`, `refund`, `grant`.
+
+## Кошелёк и проверка баланса
+
+```bash
+curl https://api.neuroartist.ru/me/balance \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+```json
+{ "userId": "u_…", "balance": 248 }
+```
+
+## Top-up через YooKassa
+
+YooKassa — единственный платёжный провайдер. Минимальная сумма пополнения — `MIN_TOPUP_RUB` (по умолчанию 500 ₽).
+
+<Steps>
+
+### Создать платёж
+
+```bash
+curl -X POST https://api.neuroartist.ru/billing/topup \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"amountRub": 1000, "returnUrl":"https://gateway.neuroartist.ru/billing"}'
+```
+
+<Callout type="info">
+  Top-up — **session-only**. Из API-ключа платёж создать нельзя, чтобы случайно утёкший ключ не списал карту.
+</Callout>
+
+```json
+{
+  "payment": {
+    "id": "pay_abc",
+    "yookassaId": "2c…",
+    "status": "pending",
+    "creditsToGrant": 1000,
+    "amountKopecks": 100000,
+    "currency": "RUB",
+    "description": "Пополнение баланса Neuroartist",
+    "createdAt": "2026-04-25T10:00:00Z"
+  },
+  "confirmationUrl": "https://yoomoney.ru/checkout/payments/v2/contract?…"
+}
+```
+
+### Перенаправить пользователя
+
+`confirmationUrl` — это checkout-страница YooKassa. После успеха YooKassa редиректит на `returnUrl` и шлёт webhook gateway-у.
+
+### Дождаться зачисления
+
+Через 1–5 секунд после оплаты webhook YooKassa зачисляет кредиты на баланс. Никакой polling не нужен — UI получит обновление через `useSession()` + `/me/balance`.
+
+</Steps>
+
+## Сохранённые карты
+
+После первой успешной оплаты YooKassa возвращает `payment_method_id`. Gateway сохраняет его в `payment_method` (с обнулёнными PAN — только маска), чтобы:
+
+- Использовать в auto-topup без повторного ввода реквизитов.
+- Дать пользователю выбор «оплатить сохранённой картой» в UI.
+
+```bash
+# Список
+curl https://api.neuroartist.ru/me/payment-methods -b cookies.txt
+
+# Сделать default
+curl -X POST https://api.neuroartist.ru/me/payment-methods/{id}/default -b cookies.txt
+
+# Удалить
+curl -X DELETE https://api.neuroartist.ru/me/payment-methods/{id} -b cookies.txt
+```
+
+## Auto-topup
+
+Когда баланс падает ниже порога — gateway автоматически списывает с `default` payment-method фиксированную сумму. Это снимает класс «закончились кредиты в три часа ночи».
+
+### Включить
+
+```bash
+curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"enabled": true, "thresholdRub": 200, "amountRub": 1000}'
+```
+
+### Условия
+
+- Должна быть хотя бы одна сохранённая карта с `default=true`.
+- `thresholdRub` — порог срабатывания (минимум `AUTO_TOPUP_MIN_THRESHOLD_RUB`, по умолчанию 10).
+- `amountRub` — сумма пополнения (между `AUTO_TOPUP_MIN_AMOUNT_RUB` и `AUTO_TOPUP_MAX_AMOUNT_RUB`, по умолчанию 50 / 10 000).
+- Срабатывает не чаще раза в 60 секунд (защита от циклов).
+
+### Выключить
+
+```bash
+curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"enabled": false}'
+```
+
+## Уведомления о низком балансе
+
+При проседании ниже `LOW_BALANCE_THRESHOLD_RUB` (по умолчанию 100) — **один раз** уходит email. Повторно — только после top-up и нового падения. Отписаться:
+
+```bash
+curl -X PATCH https://api.neuroartist.ru/me \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"lowBalanceEmailOptOut": true}'
+```
+
+## Чеки
+
+YooKassa формирует фискальный чек (54-ФЗ) для каждого успешного платежа. Ссылку на чек можно получить редиректом:
+
+```bash
+curl -L https://api.neuroartist.ru/billing/payments/{id}/receipt -b cookies.txt
+# 302 → https://yookassa.ru/receipts/…
+```
+
+Список платежей и их детали:
+
+```bash
+GET /billing/payments?limit=50&offset=0
+GET /billing/payments/{id}
+```
+
+## История транзакций
+
+```bash
+curl 'https://api.neuroartist.ru/me/transactions?type=deduct&limit=20' \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "tx_…",
+      "userId": "u_…",
+      "type": "deduct",
+      "amount": -8,
+      "description": "fal-ai/flux/dev",
+      "createdAt": "2026-04-25T10:01:23Z"
+    }
+  ],
+  "total": 142,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+Полное описание полей — в разделе [API → Me](/api/me#transactions).
+
+## Estimate перед запуском
+
+Если сомневаетесь в стоимости — можно посчитать без списания:
+
+```bash
+curl -X POST https://api.neuroartist.ru/models/fal-ai%2Fflux%2Fdev/estimate \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"…","num_inference_steps":28}'
+```
+
+```json
+{
+  "modelId": "fal-ai/flux/dev",
+  "estimatedCostRub": 8,
+  "priceUnit": "image",
+  "quantity": 1,
+  "currency": "RUB"
+}
+```
+
+`estimatedCostRub` — верхняя граница. Реальное списание может быть меньше при reconciliation.
