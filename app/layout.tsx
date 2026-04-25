@@ -6,6 +6,7 @@ import { Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
+import { LogoMark } from './components/logo'
 
 const golosText = Golos_Text({
   variable: '--font-golos-text',
@@ -27,8 +28,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Документация — Neuroartist API',
-    template: '%s — Neuroartist API'
+    default: 'Документация — НейроХудожник API',
+    template: '%s — НейроХудожник API Docs'
   },
   description:
     'REST API для генерации изображений, видео и аудио. FLUX, Kling, ElevenLabs и ещё 1300+ моделей. Оплата в рублях, без VPN.'
@@ -36,7 +37,14 @@ export const metadata: Metadata = {
 
 const navbar = (
   <Navbar
-    logo={<span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>Neuroartist API</span>}
+    logo={
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <LogoMark size={26} />
+        <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
+          НейроХудожник <span style={{ opacity: 0.55 }}>API Docs</span>
+        </span>
+      </span>
+    }
   >
     <a
       href="https://gateway.neuroartist.ru"
@@ -51,7 +59,7 @@ const navbar = (
 
 const footer = (
   <Footer>
-    <span style={{ opacity: 0.6 }}>{new Date().getFullYear()} © Neuroartist.</span>
+    <span style={{ opacity: 0.6 }}>{new Date().getFullYear()} © НейроХудожник.</span>
   </Footer>
 )
 

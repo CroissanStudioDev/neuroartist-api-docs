@@ -27,7 +27,7 @@ export async function GET() {
   )
 
   const body = [
-    '# Neuroartist API',
+    '# НейроХудожник API',
     '',
     'Назначение: один HTTPS API для image / video / audio generation с кредитным биллингом, async-очередью, SSE-прогрессом, webhooks и S3-хранением результатов.',
     '',
