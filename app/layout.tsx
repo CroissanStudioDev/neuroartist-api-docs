@@ -92,7 +92,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           editLink={null}
           feedback={{ content: '' }}
           navigation={{ prev: true, next: true }}
-          copyPageButton={false}
+          copyPageButton
           lastUpdated={<LastUpdated locale="ru-RU">Обновлено</LastUpdated>}
         >
           {children}
