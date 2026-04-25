@@ -1,0 +1,30 @@
+node_modules
+.next
+.git
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+*.log
+out
+build
+dist
+.DS_Store
+# Pagefind index — регенерируется в postbuild внутри образа.
+public/_pagefind
+# Docs/agents — не нужны в build context.
+README.md
+AGENTS.md
+CLAUDE.md
+# TS build cache.
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+# Misc tooling
+.cache
+.turbo
+.vercel

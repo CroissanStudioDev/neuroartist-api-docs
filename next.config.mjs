@@ -9,6 +9,7 @@ const withNextra = nextra({
 
 export default withNextra({
   reactStrictMode: true,
+  output: 'standalone',
   turbopack: {
     resolveAlias: {
       'next-mdx-import-source-file': './mdx-components.tsx'
