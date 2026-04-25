@@ -12,7 +12,7 @@ import { Tabs } from 'nextra/components'
 ```bash
 # 1. Получить webhook secret (session-only)
 curl -X POST https://api.neuroartist.ru/me/webhook-secret/rotate -b cookies.txt
-# {"newSecret":"wsec_…"}
+# {"secret":"base64-32-byte-secret"}
 
 # 2. Поднять HTTPS endpoint (для local dev — ngrok)
 ngrok http 3000
@@ -34,7 +34,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://a
 import { Hono } from 'hono'
 import crypto from 'node:crypto'
 
-const SECRET = process.env.NA_WEBHOOK_SECRET!.replace(/^wsec_/, '')
+const SECRET = process.env.NA_WEBHOOK_SECRET!
 const app = new Hono()
 
 app.post('/cb', async (c) => {
@@ -76,7 +76,7 @@ app.post('/cb', async (c) => {
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 
-const SECRET = process.env.NA_WEBHOOK_SECRET!.replace(/^wsec_/, '')
+const SECRET = process.env.NA_WEBHOOK_SECRET!
 
 export async function POST(req: NextRequest) {
   const id = req.headers.get('webhook-id')
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   if (!valid) return NextResponse.json({}, { status: 401 })
 
   const event = JSON.parse(raw)
-  // process…
+  // обработайте событие
 
   return NextResponse.json({ ok: true })
 }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 import express from 'express'
 import crypto from 'node:crypto'
 
-const SECRET = process.env.NA_WEBHOOK_SECRET.replace(/^wsec_/, '')
+const SECRET = process.env.NA_WEBHOOK_SECRET
 const app = express()
 
 // IMPORTANT: raw body — НЕ express.json
@@ -149,7 +149,7 @@ import os, hmac, base64, time, json
 from fastapi import FastAPI, Request, HTTPException
 
 app = FastAPI()
-SECRET = os.environ["NA_WEBHOOK_SECRET"].removeprefix("wsec_")
+SECRET = os.environ["NA_WEBHOOK_SECRET"]
 
 @app.post("/cb")
 async def cb(req: Request):
@@ -222,3 +222,9 @@ Failed:
 | 6 | 5 часов |
 
 После 6-й — `webhook_dead` в `/me/activity`. Можно перечитать через `GET /queue/.../requests/{id}`.
+
+## Дальше
+
+- [Формат webhooks](/reference/webhooks) — заголовки, подпись и тело события.
+- [Асинхронная очередь и SSE](/build/async) — как получить `requestId`.
+- [`/me/webhook-secret`](/reference/api/me#get-mewebhook-secret) — посмотреть текущий signing secret.

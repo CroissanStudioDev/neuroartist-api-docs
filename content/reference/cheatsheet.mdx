@@ -35,7 +35,7 @@ description: Все публичные эндпоинты на одной стр
 
 | | Метод | Путь | Что |
 | --- | --- | --- | --- |
-| a | `POST` | `/run/{modelId}` | Submit + ждать результат до 5 мин |
+| a | `POST` | `/run/{modelId}` | Отправить задачу и ждать результат до 5 мин |
 
 `?passthrough=1` — оригинальные URL-ы без re-host в S3.
 
@@ -43,7 +43,7 @@ description: Все публичные эндпоинты на одной стр
 
 | | Метод | Путь | Что |
 | --- | --- | --- | --- |
-| a | `POST` | `/queue/{modelId}` | Submit, вернёт `requestId` |
+| a | `POST` | `/queue/{modelId}` | Отправить задачу, вернёт `requestId` |
 | a | `GET` | `/queue/{modelId}/requests/{requestId}` | Забрать результат |
 | a | `GET` | `/queue/{modelId}/requests/{requestId}/status` | Статус (one-shot) |
 | a | `GET` | `/queue/{modelId}/requests/{requestId}/status/stream` | Raw SSE статус |
@@ -89,6 +89,14 @@ description: Все публичные эндпоинты на одной стр
 | a | `GET` | `/billing/payments/{id}` | Детали платежа |
 | s | `GET` | `/billing/payments/{id}/receipt` | Редирект на чек |
 
+## OpenAI-совместимый слой (`/v1`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| — | `GET` | `/v1/models` | OpenAI-shaped список моделей |
+| a | `POST` | `/v1/images/generations` | Image generation в формате OpenAI SDK |
+| — | `POST` | `/v1/chat/completions` | `501 not_implemented`: gateway не обслуживает chat |
+
 ## Health и discovery
 
 | | Метод | Путь | Что |
@@ -104,7 +112,7 @@ description: Все публичные эндпоинты на одной стр
 | — | `GET` | `/llms-full.txt` | LLM-friendly markdown (full) |
 | — | `GET` | `/.well-known/agent-configuration` | Agent-auth discovery |
 
-## Webhooks (входящие, server-to-server)
+## Входящие webhooks (server-to-server)
 
 | | Метод | Путь | Что |
 | --- | --- | --- | --- |
@@ -126,14 +134,14 @@ Retry-After: <seconds>                ← при 429/503
 ## Формат ошибки
 
 ```json
-{ "code": "insufficient_balance", "message": "Not enough credits", "details": { "required": 12, "available": 5 } }
+{ "error": "insufficient_balance", "message": "Not enough credits", "required": 12, "available": 5 }
 ```
 
-Ветвите по `code`. Полный список — [Errors](/reference/errors).
+Ветвите по `error`. Полный список — [коды ошибок](/reference/errors).
 
 ## Лимиты
 
-| Scope | Лимит |
+| Область | Лимит |
 | --- | --- |
 | `POST /api/auth/sign-in/email` | 10 / 5 мин / IP |
 | `POST /api/auth/sign-up/email` | 5 / 5 мин / IP |
@@ -150,3 +158,9 @@ Retry-After: <seconds>                ← при 429/503
 ✓ /run/fal-ai/flux/dev
 ✓ /run/fal-ai%2Fflux%2Fdev    (тоже работает, но не нужно)
 ```
+
+## Дальше
+
+- [Быстрый старт](/get-started/quickstart) — первый рабочий запрос.
+- [Справочник эндпоинтов](/reference/api) — подробные схемы.
+- [`/llms.txt`](/llms.txt) — компактный контекст для AI-агента.

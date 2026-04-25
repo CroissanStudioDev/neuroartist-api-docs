@@ -78,7 +78,7 @@ curl "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc" \
 
 ## Webhook вместо SSE
 
-Самый правильный путь для серверных pipelines:
+Самый устойчивый путь для серверных pipeline-ов:
 
 ```bash
 curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
@@ -87,7 +87,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   -d '{"prompt":"…"}'
 ```
 
-После terminal-стадии gateway POST-ит подписанный JSON на ваш URL. → [Recipe: webhook receiver](/build/webhooks).
+После terminal-стадии gateway POST-ит подписанный JSON на ваш URL. → [готовый приёмник webhook](/build/webhooks).
 
 ## Параллельные запросы
 
@@ -119,3 +119,9 @@ curl -X PUT https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/ca
 ```
 
 Кредиты возвращаются (refund-транзакция).
+
+## Дальше
+
+- [Формат SSE-стрима](/reference/sse) — стадии и heartbeat-фреймы.
+- [Приём webhook](/build/webhooks) — Hono, Next.js, Express и FastAPI.
+- [`/queue` в справочнике](/reference/api/queue) — все методы async-очереди.

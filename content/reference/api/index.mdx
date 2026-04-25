@@ -8,12 +8,12 @@ description: Базовые URL, аутентификация, формат ош
 ## URL
 
 ```
-Production   https://api.neuroartist.ru
-Staging      https://staging.neuroartist.ru
-Local dev    http://localhost:8000
+Боевой      https://api.neuroartist.ru
+Staging     https://staging.neuroartist.ru
+Локально    http://localhost:8000
 ```
 
-## Auth
+## Аутентификация
 
 Один из:
 
@@ -36,10 +36,10 @@ Cookie: better-auth.session_token=…
 ## Envelope ошибок
 
 ```json
-{ "code": "insufficient_balance", "message": "Not enough credits", "details": { "required": 12, "available": 5 } }
+{ "error": "insufficient_balance", "message": "Not enough credits", "required": 12, "available": 5 }
 ```
 
-Ветвите по `code` — стабильный machine-readable. Полный список — [Errors](/reference/errors).
+Ветвите по `error` — стабильный machine-readable. Полный список — [коды ошибок](/reference/errors).
 
 ## Стандартные headers
 
@@ -77,15 +77,22 @@ Cross-origin браузер → `credentials: 'include'` для session cookie.
 
 | Префикс | Группа | Назначение |
 | --- | --- | --- |
-| `/api/auth/*` | Auth | Better Auth — sign-up/in/out, OAuth, ключи |
+| `/api/auth/*` | Аутентификация | Better Auth — регистрация, вход, OAuth, ключи |
 | `/models/*` | Models | Каталог |
 | `/run/{modelId}` | Run | Sync-генерация |
 | `/queue/{modelId}/*` | Queue | Async-генерация + SSE |
+| `/v1/*` | OpenAI compatibility | OpenAI-shaped images API |
 | `/me/*` | Me | Профиль, ключи, активность, баланс |
 | `/billing/*` | Billing | Top-up YooKassa |
-| `/webhooks/*` | Webhooks | Server-to-server (провайдеры, YooKassa) |
+| `/webhooks/*` | Входящие webhooks | Server-to-server (провайдеры, YooKassa) |
 | `/health`, `/metrics` | Health | Liveness, Prometheus |
 
 ## Версионирование
 
 API не версионируется в URL. Изменения — обратно совместимо. Список — `GET /changelog.json`.
+
+## Дальше
+
+- [Шпаргалка по API](/reference/cheatsheet) — все публичные эндпоинты одним списком.
+- [`/run`](/reference/api/run) — синхронная генерация.
+- [`/queue`](/reference/api/queue) — async, polling, SSE и cancel.

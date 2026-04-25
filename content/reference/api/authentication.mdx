@@ -1,6 +1,6 @@
 ---
 title: /api/auth
-description: Better Auth ручки — sign-up/in/out, password reset, OAuth, API keys
+description: Better Auth ручки — регистрация, вход, сброс пароля, OAuth, API-ключи
 ---
 
 # `/api/auth`
@@ -13,7 +13,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 Регистрация по email + паролю.
 
-**Body:**
+**Тело запроса:**
 
 ```json
 {
@@ -23,7 +23,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 }
 ```
 
-**Response 200:**
+**Ответ 200:**
 
 ```json
 {
@@ -39,19 +39,19 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 - Уходит письмо для подтверждения email (если SMTP настроен).
 
 **Rate limit:** 5 / 5 минут / IP.  
-**Errors:** `400 invalid_body`, `409 conflict` (email уже занят), `429 rate_limited`.
+**Ошибки:** `400 invalid_body`, `409 conflict` (email уже занят), `429 rate_limited`.
 
 ### `POST /api/auth/sign-in/email`
 
 Вход.
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "email": "you@example.com", "password": "…" }
 ```
 
-**Response:** аналогично sign-up.
+**Ответ:** аналогично sign-up.
 
 **Rate limit:** 10 / 5 минут / IP.
 
@@ -59,13 +59,13 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 Выход — удаляет session, инвалидирует cookie.
 
-**Response 200:** `{ "ok": true }`
+**Ответ 200:** `{ "ok": true }`
 
 ### `POST /api/auth/forgot-password/email`
 
 Запрос ссылки восстановления.
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "email": "you@example.com" }
@@ -79,7 +79,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 Установка нового пароля.
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "token": "…", "newPassword": "NewStrongPassword2026!" }
@@ -89,7 +89,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 Подтверждение email по токену из письма.
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "token": "…" }
@@ -101,7 +101,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 Возвращает текущую сессию (или `null`, если нет cookie).
 
-**Response 200:**
+**Ответ 200:**
 
 ```json
 {
@@ -118,7 +118,7 @@ description: Better Auth ручки — sign-up/in/out, password reset, OAuth, A
 
 ### `GET /api/auth/callback/yandex`
 
-Callback OAuth. Возвращает session cookie + редиректит на `redirect` параметр.
+Callback OAuth. Возвращает session cookie и редиректит на `redirect` параметр.
 
 ## API-ключи
 
@@ -126,18 +126,18 @@ Callback OAuth. Возвращает session cookie + редиректит на 
 
 ### `POST /api/auth/api-key/create`
 
-**Body:**
+**Тело запроса:**
 
 ```json
 {
-  "name": "Production server",
+    "name": "Production server",
   "expiresIn": 31536000
 }
 ```
 
 `expiresIn` — секунд до истечения; `null` = без истечения.
 
-**Response 201:**
+**Ответ 201:**
 
 ```json
 {
@@ -161,25 +161,25 @@ Callback OAuth. Возвращает session cookie + редиректит на 
 
 ### `POST /api/auth/api-key/delete`
 
-**Body:** `{ "keyId": "key_abc" }`
+**Тело запроса:** `{ "keyId": "key_abc" }`
 
-**Response 204.**
+**Ответ 204.**
 
 <details>
 <summary>Альтернативные пути</summary>
 
 В UI и `/me/keys` тот же функционал зеркалирован под более удобными HTTP-методами:
 
-- `GET /me/keys` — list.
-- `POST /me/keys` — create.
-- `DELETE /me/keys/{id}` — revoke.
+- `GET /me/keys` — список.
+- `POST /me/keys` — создание.
+- `DELETE /me/keys/{id}` — удаление.
 - `PATCH /me/keys/{id}` — обновить (имя, monthly limit).
 
 См. [`/me`](/reference/api/me).
 
 </details>
 
-## Admin (через session с `role=admin`)
+## Администрирование (через session с `role=admin`)
 
 ### `POST /api/auth/admin/list-users`
 
@@ -193,13 +193,13 @@ Callback OAuth. Возвращает session cookie + редиректит на 
 
 Альтернативно — через `/admin/users/{id}` с PATCH (см. отдельный admin-API, не описанный в публичной спеке).
 
-## Agent Auth
+## Discovery для AI-агентов
 
 ### `GET /api/auth/agent-configuration`
 
 Discovery endpoint для AI-агентов (alias `/.well-known/agent-configuration`).
 
-**Response:**
+**Ответ:**
 
 ```json
 {
@@ -208,3 +208,9 @@ Discovery endpoint для AI-агентов (alias `/.well-known/agent-configura
   "endpoints": { … }
 }
 ```
+
+## Дальше
+
+- [Аутентификация](/get-started/authentication) — когда использовать session или API-key.
+- [`/me/keys`](/reference/api/me#api-ключи) — управление ключами через session.
+- [Быстрый старт](/get-started/quickstart) — первый запрос с новым ключом.

@@ -13,7 +13,7 @@ Async-режим (`POST /queue`) возвращает `requestId` сразу. Ч
 GET /queue/{modelId}/requests/{requestId}/progress/stream
 ```
 
-Auth: API-key или session (через `credentials: 'include'` в браузере).
+Аутентификация: API-key или session (через `credentials: 'include'` в браузере).
 
 ## Формат фрейма
 
@@ -26,7 +26,7 @@ data: {"stage":"in_progress","requestId":"req_abc","timestamp":"…","payload":{
 
 | Стадия | Когда |
 | --- | --- |
-| `queued` | Submit принят, ждём слот у провайдера |
+| `queued` | Задача принята, ждём слот у провайдера |
 | `in_progress` | Провайдер начал |
 | `uploading_assets` | Артефакты выгружаются в S3 |
 | `reconciling` | Списание корректируется по факту |
@@ -93,7 +93,7 @@ Comment-фрейм для удержания соединения через rev
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 60
-{"code":"too_many_sse_connections"}
+{"error":"rate_limited","code":"too_many_sse_connections"}
 ```
 
 Слот освобождается при close либо TTL 1 час.
@@ -106,4 +106,10 @@ Retry-After: 60
 | Серверный pipeline без UI | Некому держать соединение |
 | Нужны retries при ошибке доставки | SSE не ретраится |
 
-См. [Webhooks](/reference/webhooks).
+См. [формат webhooks](/reference/webhooks).
+
+## Дальше
+
+- [Асинхронная очередь и SSE](/build/async) — copy-paste клиентский код.
+- [`/queue` в справочнике](/reference/api/queue) — raw status stream и progress stream.
+- [Приём webhook](/build/webhooks) — server-to-server альтернатива SSE.

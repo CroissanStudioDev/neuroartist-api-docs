@@ -1,5 +1,5 @@
 ---
-title: Rate limits
+title: Лимиты запросов
 description: Лимиты по IP, per-user, per-key и retry-стратегия
 ---
 
@@ -16,7 +16,7 @@ Retry-After: 47
 
 ## Все лимиты
 
-| Scope | Лимит | На что |
+| Область | Лимит | На что |
 | --- | --- | --- |
 | IP | 10 / 5 мин | `POST /api/auth/sign-in/email` |
 | IP | 5 / 5 мин | `POST /api/auth/sign-up/email` |
@@ -63,6 +63,12 @@ curl -X PATCH https://api.neuroartist.ru/me/keys/key_abc \
 - `GET` ручки (`/models`, `/me/balance`, `/me/transactions`) — только глобальный 1000/час.
 - `/health`, `/openapi.json`, `/docs` — публичные.
 
-## Headers в CORS
+## Заголовки в CORS
 
 `X-RateLimit-*` и `Retry-After` — в expose-list, читаемы из браузера.
+
+## Дальше
+
+- [Коды ошибок](/reference/errors) — как ветвить по `error`.
+- [Асинхронная очередь и SSE](/build/async) — как не упереться в лимит SSE.
+- [Аутентификация](/get-started/authentication) — monthly cap на API-ключ.

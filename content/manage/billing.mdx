@@ -61,7 +61,7 @@ curl -X POST https://api.neuroartist.ru/billing/topup \
 
 После успешной оплаты YooKassa возвращает `payment_method_id`. Gateway сохраняет (с маской PAN) для:
 
-- Auto-topup без переввода реквизитов.
+- Авто-пополнение без переввода реквизитов.
 - "Оплатить сохранённой картой" в UI.
 
 ```bash
@@ -70,7 +70,7 @@ curl -X POST https://api.neuroartist.ru/me/payment-methods/pm_abc/default -b coo
 curl -X DELETE https://api.neuroartist.ru/me/payment-methods/pm_abc -b cookies.txt
 ```
 
-## Auto-topup
+## Авто-пополнение
 
 Списание с default-карты при просадке ниже порога. Подробнее — [/manage/auto-topup](/manage/auto-topup).
 
@@ -92,3 +92,9 @@ curl -L https://api.neuroartist.ru/billing/payments/pay_abc/receipt -b cookies.t
 - При sign-up — `WELCOME_BONUS_RUB` (default 50 ₽).
 - При просадке ниже `LOW_BALANCE_THRESHOLD_RUB` (default 100) — **один** email до следующего top-up.
 - Отписаться: `PATCH /me {"lowBalanceEmailOptOut":true}`.
+
+## Дальше
+
+- [Авто-пополнение](/manage/auto-topup) — включить списание с сохранённой карты.
+- [`/billing` в справочнике](/reference/api/billing) — платежи, чеки и статусы.
+- [Шпаргалка по API](/reference/cheatsheet) — быстрый список billing-ручек.

@@ -1,26 +1,26 @@
 ---
-title: Webhooks
+title: Формат webhooks
 description: Подписанные callbacks от gateway → ваш сервис
 ---
 
-# Webhooks
+# Формат webhooks
 
-Push-уведомление о завершении генерации на ваш HTTPS-URL. Альтернатива polling и SSE для серверных pipelines.
+Push-уведомление о завершении генерации на ваш HTTPS-URL. Альтернатива polling и SSE для серверных pipeline-ов.
 
 ## Когда использовать
 
 | Хочу | Решение |
 | --- | --- |
-| Real-time UI в браузере | [SSE](/reference/sse) |
+| UI в реальном времени в браузере | [SSE](/reference/sse) |
 | Серверный pipeline без активного клиента | **Webhook** |
 | Видео-генерация / batched job | **Webhook** |
-| Retries при ошибке | **Webhook** (6 попыток с backoff) |
+| Повторные попытки при ошибке доставки | **Webhook** (6 попыток с backoff) |
 
 ## Подключение
 
 1. Получите webhook secret: `POST /me/webhook-secret/rotate` (session-only).
 2. Подготовьте HTTPS-endpoint, отвечающий `200 OK`.
-3. Передавайте `?webhook=<URL>` при submit:
+3. Передавайте `?webhook=<URL>` при отправке задачи:
 
 ```bash
 curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
@@ -39,7 +39,7 @@ Webhook-Timestamp: 1714050000
 Webhook-Signature: v1,base64-encoded-hmac-sha256
 ```
 
-Body — completed:
+Тело для completed:
 
 ```json
 {
@@ -52,7 +52,7 @@ Body — completed:
 }
 ```
 
-Body — failed:
+Тело для failed:
 
 ```json
 {
@@ -80,7 +80,7 @@ function verify(req, secret) {
 
   if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false  // anti-replay 5 мин
 
-  const key = Buffer.from(secret.replace(/^wsec_/, ''), 'base64')
+  const key = Buffer.from(secret, 'base64')
   const expected = 'v1,' + crypto.createHmac('sha256', key)
     .update(`${id}.${ts}.${req.rawBody}`).digest('base64')
 
@@ -115,8 +115,14 @@ if (seen === null) return res.status(200).end()
 
 ## Полный код приёмника
 
-→ [Recipe: Receive webhooks](/build/webhooks) (Hono / Next / Express / FastAPI).
+→ [готовый приёмник webhook](/build/webhooks) (Hono / Next / Express / FastAPI).
 
 ## Внутренние webhooks (НЕ для вас)
 
 `/webhooks/{providerId}` и `/webhooks/yookassa/notify` — это **входящие** server-to-server endpoints между gateway и upstream-ами (fal.ai, YooKassa). В клиентский код к ним обращаться не нужно.
+
+## Дальше
+
+- [Приём webhook](/build/webhooks) — copy-paste код с проверкой подписи.
+- [`/queue` в справочнике](/reference/api/queue) — параметр `?webhook=`.
+- [Хранение результатов](/reference/asset-hosting) — почему URL в webhook уже S3.

@@ -8,7 +8,7 @@ import { Callout } from 'nextra/components'
 # `/webhooks`
 
 <Callout type="info">
-  Это **входящие** webhooks — server-to-server, между upstream-ами и gateway. Клиентский код к ним обращаться не должен. Если вы интегрируете SDK / приложение, см. [Concepts → Webhooks](/reference/webhooks) — там про **исходящие** webhooks gateway → ваш сервис.
+  Это **входящие** webhooks — server-to-server, между upstream-ами и gateway. Клиентский код к ним обращаться не должен. Если вы интегрируете SDK / приложение, см. [формат webhooks](/reference/webhooks) — там про **исходящие** webhooks gateway → ваш сервис.
 </Callout>
 
 ## `POST /webhooks/{providerId}`
@@ -17,9 +17,9 @@ Webhook от ML-провайдера (fal.ai, replicate, azure).
 
 **Защита:** ED25519-подпись провайдера через JWKS. В dev можно отключить через `FAL_WEBHOOK_DEV_BYPASS=true` (только при `NODE_ENV=development`).
 
-**Path:** `providerId` ∈ {`fal`, `replicate`, `azure`} (registry зависит от установленных провайдеров).
+**Параметр path:** `providerId` ∈ {`fal`, `replicate`, `azure`} (registry зависит от установленных провайдеров).
 
-**Body:**
+**Тело запроса:**
 
 ```json
 {
@@ -33,7 +33,7 @@ Webhook от ML-провайдера (fal.ai, replicate, azure).
 
 `status` — `OK` или `ERROR`.
 
-**Response 200:**
+**Ответ 200:**
 
 ```json
 {
@@ -44,7 +44,7 @@ Webhook от ML-провайдера (fal.ai, replicate, azure).
 }
 ```
 
-**Errors:**
+**Ошибки:**
 
 - `400 invalid_json` / `missing_request_id`.
 - `401 invalid_signature`.
@@ -58,7 +58,7 @@ Webhook от YooKassa о состоянии платежа.
 
 **Защита:** IP-whitelist (CIDR YooKassa) + HMAC. В dev можно отключить через env.
 
-**Body** (форматы YooKassa):
+**Тело запроса** (форматы YooKassa):
 
 ```json
 {
@@ -73,7 +73,7 @@ Webhook от YooKassa о состоянии платежа.
 }
 ```
 
-**Response 200:** `{ "ok": true, "processed": true }` — или `{ "processed": false, "reason": "duplicate" }` при дедупе.
+**Ответ 200:** `{ "ok": true, "processed": true }` — или `{ "processed": false, "reason": "duplicate" }` при дедупе.
 
 **Идемпотентность:** Redis SETNX по `webhook_id` с TTL 1 час.
 
@@ -82,4 +82,10 @@ Webhook от YooKassa о состоянии платежа.
 - На `payment.succeeded`: зачисляет кредиты, сохраняет `payment_method` в `payment_method` таблицу (если ещё нет), отправляет email-нотификацию.
 - На `payment.canceled`: помечает платёж `canceled`, кредиты не зачисляются.
 
-**Errors:** `400 invalid_json` / `invalid_body`. Подпись/IP — игнорируются (200 OK с `processed: false, reason: …`), чтобы YooKassa не ретраила бесконечно.
+**Ошибки:** `400 invalid_json` / `invalid_body`. Подпись/IP — игнорируются (200 OK с `processed: false, reason: …`), чтобы YooKassa не ретраила бесконечно.
+
+## Дальше
+
+- [Формат webhooks](/reference/webhooks) — исходящие callbacks gateway → ваш сервис.
+- [Приём webhook](/build/webhooks) — код вашего endpoint-а.
+- [Биллинг](/reference/api/billing) — платежи, которые завершает YooKassa webhook.

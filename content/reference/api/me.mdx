@@ -41,7 +41,7 @@ description: Профиль, баланс, ключи, активность
 }
 ```
 
-**Response 200:** `{ "user": { … } }`
+**Ответ 200:** `{ "user": { … } }`
 
 ## Сессии
 
@@ -61,7 +61,7 @@ description: Профиль, баланс, ключи, активность
 
 **session-only**
 
-Ревокирует сессию. Response 204.
+Ревокирует сессию. Ответ 204.
 
 ## Баланс
 
@@ -73,7 +73,7 @@ description: Профиль, баланс, ключи, активность
 
 ### `GET /me/transactions`
 
-**Query:**
+**Параметры query:**
 
 | Параметр | Тип |
 | --- | --- |
@@ -81,7 +81,7 @@ description: Профиль, баланс, ключи, активность
 | `limit` | int (default 50) |
 | `offset` | int (default 0) |
 
-**Response:**
+**Ответ:**
 
 ```json
 {
@@ -109,7 +109,7 @@ description: Профиль, баланс, ключи, активность
 
 Снимок расходов по окнам.
 
-**Query:** `windows=5h,24h,7d,30d` (default — все четыре).
+**Параметры query:** `windows=5h,24h,7d,30d` (default — все четыре).
 
 ```json
 {
@@ -129,7 +129,7 @@ description: Профиль, баланс, ключи, активность
 
 Time-series.
 
-**Query:**
+**Параметры query:**
 
 | Параметр | Описание |
 | --- | --- |
@@ -150,7 +150,7 @@ Time-series.
 
 Расход по моделям за rolling-window.
 
-**Query:** `window=5h|24h|7d|30d`.
+**Параметры query:** `window=5h|24h|7d|30d`.
 
 ```json
 {
@@ -163,7 +163,7 @@ Time-series.
 
 Расход по API-ключам (исключает session-расходы).
 
-**Query:** `window=5h|24h|7d|30d`.
+**Параметры query:** `window=5h|24h|7d|30d`.
 
 ```json
 {
@@ -186,7 +186,7 @@ Time-series.
 
 Лента запросов (submit / status / result / cancel / stream).
 
-**Query:**
+**Параметры query:**
 
 | Параметр | Тип |
 | --- | --- |
@@ -197,13 +197,13 @@ Time-series.
 | `limit` | int |
 | `offset` | int |
 
-**Response:**
+**Ответ:**
 
 ```json
 {
   "items": [
     {
-      "falRequestId": "req_abc",
+      "requestId": "req_abc",
       "modelId": "fal-ai/flux/dev",
       "operation": "submit",
       "status": "COMPLETED",
@@ -226,7 +226,7 @@ Time-series.
 
 ```json
 {
-  "record": { "falRequestId": "req_abc", "modelId": "fal-ai/flux/dev", "operation": "submit", "status": "COMPLETED", "credits": 8, "durationMs": 4210, "createdAt": "…" },
+  "record": { "requestId": "req_abc", "modelId": "fal-ai/flux/dev", "operation": "submit", "status": "success", "credits": 8, "durationMs": 4210, "createdAt": "…" },
   "assets": [
     { "assetId": "asset_…", "url": "https://s3.cloud.ru/…", "contentType": "image/webp", "sizeBytes": 487123 }
   ]
@@ -259,13 +259,13 @@ Time-series.
 
 **session-only**
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "name": "New key", "expiresIn": 31536000 }
 ```
 
-**Response 201:** содержит `key` **один раз**.
+**Ответ 201:** содержит `key` **один раз**.
 
 ```json
 {
@@ -283,7 +283,7 @@ Time-series.
 
 **session-only**
 
-**Body:**
+**Тело запроса:**
 
 ```json
 {
@@ -298,7 +298,7 @@ Time-series.
 
 **session-only**
 
-Response 204.
+Ответ 204.
 
 ## Сохранённые карты
 
@@ -322,15 +322,15 @@ Response 204.
 
 **session-only**
 
-Удалить карту. Response 204.
+Удалить карту. Ответ 204.
 
-## Auto-topup
+## Авто-пополнение
 
 ### `PATCH /me/auto-topup`
 
 **session-only**
 
-**Body:**
+**Тело запроса:**
 
 ```json
 { "enabled": true, "thresholdRub": 200, "amountRub": 1000 }
@@ -338,22 +338,24 @@ Response 204.
 
 Подробнее — [Гайд](/manage/auto-topup).
 
-## Webhook secret
+## Secret для подписи webhook
 
 ### `GET /me/webhook-secret`
 
 **session-only**
 
 ```json
-{ "secret": "wsec_…" }   // или null, если ещё не создан
+{ "secret": "base64-32-byte-secret" }
 ```
+
+Если secret ещё не создан, вернётся `null`.
 
 ### `POST /me/webhook-secret/rotate`
 
 **session-only**
 
 ```json
-{ "newSecret": "wsec_…" }
+{ "secret": "base64-32-byte-secret" }
 ```
 
 Показывается **один раз**.
@@ -366,7 +368,7 @@ Response 204.
 
 `multipart/form-data`, поле `file`.
 
-**Response 201:**
+**Ответ 201:**
 
 ```json
 {
@@ -377,6 +379,12 @@ Response 204.
 }
 ```
 
-**Errors:** `413 asset_too_large`, `415 unsupported_mime`, `503 storage_disabled`.
+**Ошибки:** `413 payload_too_large`, `415 unsupported_media_type`, `503 asset_storage_disabled`.
 
 См. [Гайд](/build/upload-inputs).
+
+## Дальше
+
+- [Аутентификация](/get-started/authentication) — какие ручки session-only.
+- [Биллинг и кредиты](/manage/billing) — баланс, платежи и сохранённые карты.
+- [Приём webhook](/build/webhooks) — как использовать signing secret.

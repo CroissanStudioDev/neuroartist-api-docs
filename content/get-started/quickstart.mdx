@@ -1,11 +1,15 @@
 ---
-title: Quickstart
+title: Быстрый старт
 description: От аккаунта до первой генерации за 60 секунд
 ---
 
-# Quickstart
+import { Steps } from 'nextra/components'
 
-## 1. Создайте аккаунт
+# Быстрый старт
+
+<Steps>
+
+### Создайте аккаунт
 
 В дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) или через API:
 
@@ -17,9 +21,9 @@ curl -X POST https://api.neuroartist.ru/api/auth/sign-up/email \
 
 После регистрации начисляется welcome-бонус 50 ₽ (≈ 6 image-генераций).
 
-## 2. Получите API-ключ
+### Получите API-ключ
 
-В дашборде: **Settings → API Keys → New Key**. Ключ показывается **один раз** — сохраните.
+В дашборде: **Настройки → API-ключи → Новый ключ**. Ключ показывается **один раз** — сохраните.
 
 ```
 na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -27,7 +31,7 @@ na_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 Передаётся в `Authorization: Bearer …` или `x-api-key: …`.
 
-## 3. Найдите модель
+### Найдите модель
 
 ```bash
 curl 'https://api.neuroartist.ru/models?category=image&sort=popular&limit=5'
@@ -35,7 +39,7 @@ curl 'https://api.neuroartist.ru/models?category=image&sort=popular&limit=5'
 
 Каждая модель — `modelId` (содержит слеши, не URL-кодируйте), `creditCost`, JSON Schema input-а.
 
-## 4. Сгенерируйте
+### Сгенерируйте
 
 ```bash
 curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
@@ -58,21 +62,21 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 
 Готово. URL живёт в нашем S3 пока вы его не удалите.
 
----
+</Steps>
 
 ## Что дальше
 
 | Задача | Гайд |
 | --- | --- |
 | Долгая генерация с прогрессом | [Async + SSE](/build/async) |
-| Серверный pipeline без UI | [Webhooks](/build/webhooks) |
+| Серверный pipeline без UI | [Приём webhook](/build/webhooks) |
 | img2img / video2video | [Загрузка файлов](/build/upload-inputs) |
-| Не закончились кредиты ночью | [Auto-topup](/manage/auto-topup) |
+| Не закончились кредиты ночью | [Авто-пополнение](/manage/auto-topup) |
 | Точная стоимость до запуска | `POST /models/{modelId}/estimate` |
 
 ## Если не сработало
 
-| Status | Code | Что делать |
+| Статус | Код | Что делать |
 | --- | --- | --- |
 | 401 | `unauthorized` | Ключ просрочен или невалиден — создайте новый |
 | 402 | `insufficient_balance` | Top-up через [`/billing/topup`](/reference/api/billing) |
@@ -80,4 +84,4 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 | 429 | `rate_limited` | См. `Retry-After` в headers |
 | 503 | `provider_error` | Upstream флапает — повторите через `Retry-After` сек |
 
-Полный справочник — [Errors](/reference/errors).
+Полный справочник — [коды ошибок](/reference/errors).

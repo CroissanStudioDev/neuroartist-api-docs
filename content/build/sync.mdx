@@ -111,7 +111,7 @@ curl https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/progress/
   -H "Authorization: Bearer na_live_xxxx"
 ```
 
-→ [Guide: async + SSE](/build/async).
+→ [Асинхронная очередь и SSE](/build/async).
 
 ## Обработка ошибок
 
@@ -148,3 +148,9 @@ curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
 | Часто > 60 сек | [/queue + SSE](/build/async) |
 | Reverse-proxy режет соединения | Webhook |
 | Хотите параллельные запросы | `/queue` |
+
+## Дальше
+
+- [Асинхронная очередь и SSE](/build/async) — если генерация переживает HTTP-таймауты.
+- [Каталог моделей](/generate/models) — получить JSON Schema перед вызовом.
+- [`/run` в справочнике](/reference/api/run) — статусы, ошибки и `passthrough`.

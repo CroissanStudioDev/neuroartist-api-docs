@@ -15,7 +15,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 const NA_API_KEY = process.env.NA_API_KEY
 const BASE = 'https://api.neuroartist.ru'
 
-// 1. Submit
+// 1. Отправить задачу
 const submit = await fetch(`${BASE}/queue/fal-ai/wan-25-preview/text-to-video`, {
   method: 'POST',
   headers: {
@@ -104,7 +104,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/kling-video/v2/standard/te
   -d '{"prompt":"…","duration":5}'
 ```
 
-Готовый код приёмника с подписью — [Build → Webhooks](/build/webhooks).
+Готовый код приёмника с подписью — [приём webhook](/build/webhooks).
 
 ## Что НЕ делать
 
@@ -147,5 +147,5 @@ curl -X POST https://api.neuroartist.ru/models/fal-ai/kling-video/v2/standard/te
 
 - [Все video-модели](/generate/models) — каталог с фильтрами.
 - [Async + SSE](/build/async) — детали стрима прогресса.
-- [Webhooks](/build/webhooks) — production-grade приёмник.
+- [Приём webhook](/build/webhooks) — production-grade приёмник.
 - [Загрузка input-файлов](/build/upload-inputs) — для img2vid, vid2vid.

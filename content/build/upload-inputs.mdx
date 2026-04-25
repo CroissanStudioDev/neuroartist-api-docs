@@ -94,3 +94,9 @@ const { url } = await upload(document.querySelector('input[type=file]').files[0]
 | `image_url`, `video_url`, `audio_url`, `*_url` | Нужно URL — загрузите либо подсуньте свой |
 | `prompt`, `negative_prompt` (string) | Текст — никаких uploads |
 | `image` (base64) — редкий случай | base64 inline в JSON |
+
+## Дальше
+
+- [Image-to-image](/generate/images#image-to-image-img2img) — использовать `image_url` в генерации.
+- [Image-to-video](/generate/video#image-to-video) — загрузить стартовый кадр.
+- [`/me/uploads` в справочнике](/reference/api/me#post-meuploads) — ошибки и ограничения.
