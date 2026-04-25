@@ -7,6 +7,7 @@ import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
 import { LogoMark } from './components/logo'
+import { RuLocalize } from './components/ru-localize'
 
 const golosText = Golos_Text({
   variable: '--font-golos-text',
@@ -97,6 +98,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         >
           {children}
         </Layout>
+        <RuLocalize />
       </body>
     </html>
   )
