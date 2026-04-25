@@ -1,97 +1,68 @@
 ---
-title: Приём webhooks
-description: Готовый код приёмника с верификацией подписи и идемпотентностью
+title: Принять webhook
+description: Готовый код приёмника с валидацией подписи
 ---
 
-import { Tabs, Steps, Callout } from 'nextra/components'
+import { Tabs } from 'nextra/components'
 
-# Приём webhooks
+# Принять webhook
 
-Полная реализация приёмника на Node.js (Hono / Express / Next.js Route Handler) и Python (FastAPI). Концептуальное описание формата — в [Webhooks](/concepts/webhooks).
-
-## Чек-лист
-
-<Steps>
-
-### 1. Получите webhook secret
+## Setup
 
 ```bash
-# Один раз при настройке
-curl https://api.neuroartist.ru/me/webhook-secret -b cookies.txt
-# или, если ещё не создан:
+# 1. Получить webhook secret (session-only)
 curl -X POST https://api.neuroartist.ru/me/webhook-secret/rotate -b cookies.txt
-```
+# {"newSecret":"wsec_…"}
 
-Сохраните в env: `NA_WEBHOOK_SECRET=wsec_…`.
-
-### 2. Поднимите endpoint, доступный по HTTPS
-
-Любой роут, отвечающий `200 OK` на `POST`. Localhost не подойдёт — для dev используйте `ngrok` или `cloudflared`:
-
-```bash
+# 2. Поднять HTTPS endpoint (для local dev — ngrok)
 ngrok http 3000
-# https://abcd-1234.ngrok-free.app/api/na-webhook
-```
 
-### 3. Передавайте URL в submit
-
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://abcd.ngrok-free.app/api/na-webhook' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+# 3. Передавать ?webhook=… при submit
+curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://abcd.ngrok-free.app/cb' \
+  -H "Authorization: Bearer na_live_xxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…"}'
 ```
 
-</Steps>
+## Receiver
 
-## Реализации
-
-<Tabs items={['Hono', 'Next.js (App Router)', 'Express', 'FastAPI']}>
+<Tabs items={['Hono', 'Next.js Route Handler', 'Express', 'FastAPI']}>
   <Tabs.Tab>
 
 ```ts
+// hono.ts
 import { Hono } from 'hono'
 import crypto from 'node:crypto'
 
-const app = new Hono()
 const SECRET = process.env.NA_WEBHOOK_SECRET!.replace(/^wsec_/, '')
+const app = new Hono()
 
-app.post('/api/na-webhook', async (c) => {
+app.post('/cb', async (c) => {
   const id = c.req.header('webhook-id')
   const ts = c.req.header('webhook-timestamp')
   const sig = c.req.header('webhook-signature')
-  if (!id || !ts || !sig) return c.json({ ok: false }, 400)
+  if (!id || !ts || !sig) return c.json({}, 400)
 
-  // 1. Защита от replay (5 минут)
-  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) {
-    return c.json({ ok: false }, 401)
-  }
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return c.json({}, 401)
 
-  // 2. Подпись
   const raw = await c.req.text()
   const key = Buffer.from(SECRET, 'base64')
-  const expected = 'v1,' + crypto
-    .createHmac('sha256', key)
-    .update(`${id}.${ts}.${raw}`)
-    .digest('base64')
+  const expected = 'v1,' + crypto.createHmac('sha256', key)
+    .update(`${id}.${ts}.${raw}`).digest('base64')
 
   const valid = sig.split(' ').some(s => {
     try { return crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected)) }
     catch { return false }
   })
-  if (!valid) return c.json({ ok: false }, 401)
+  if (!valid) return c.json({}, 401)
 
-  // 3. Идемпотентность
-  const seen = await redis.set(`na:wh:${id}`, '1', { NX: true, EX: 86400 })
+  // Дедуп по webhook-id (24h)
+  const seen = await redis.set(`wh:${id}`, '1', { NX: true, EX: 86400 })
   if (seen === null) return c.json({ ok: true, deduped: true })
 
-  // 4. Обработка
   const event = JSON.parse(raw)
-  if (event.type === 'generation.completed') {
-    await onCompleted(event)
-  } else if (event.type === 'generation.failed') {
-    await onFailed(event)
-  }
+  if (event.type === 'generation.completed') await onCompleted(event)
+  if (event.type === 'generation.failed')    await onFailed(event)
 
   return c.json({ ok: true })
 })
@@ -101,7 +72,7 @@ app.post('/api/na-webhook', async (c) => {
   <Tabs.Tab>
 
 ```ts
-// app/api/na-webhook/route.ts
+// app/api/cb/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 
@@ -142,63 +113,51 @@ export async function POST(req: NextRequest) {
 import express from 'express'
 import crypto from 'node:crypto'
 
-const app = express()
 const SECRET = process.env.NA_WEBHOOK_SECRET.replace(/^wsec_/, '')
+const app = express()
 
-// IMPORTANT: raw body, не JSON-middleware
-app.post('/api/na-webhook',
-  express.raw({ type: 'application/json' }),
-  (req, res) => {
-    const id = req.header('webhook-id')
-    const ts = req.header('webhook-timestamp')
-    const sig = req.header('webhook-signature')
-    if (!id || !ts || !sig) return res.status(400).end()
+// IMPORTANT: raw body — НЕ express.json
+app.post('/cb', express.raw({ type: 'application/json' }), (req, res) => {
+  const id = req.header('webhook-id')
+  const ts = req.header('webhook-timestamp')
+  const sig = req.header('webhook-signature')
+  if (!id || !ts || !sig) return res.status(400).end()
 
-    if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) {
-      return res.status(401).end()
-    }
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return res.status(401).end()
 
-    const raw = req.body.toString('utf8')
-    const key = Buffer.from(SECRET, 'base64')
-    const expected = 'v1,' + crypto.createHmac('sha256', key)
-      .update(`${id}.${ts}.${raw}`).digest('base64')
+  const raw = req.body.toString('utf8')
+  const key = Buffer.from(SECRET, 'base64')
+  const expected = 'v1,' + crypto.createHmac('sha256', key)
+    .update(`${id}.${ts}.${raw}`).digest('base64')
 
-    const valid = sig.split(' ').some(s => {
-      try { return crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected)) }
-      catch { return false }
-    })
-    if (!valid) return res.status(401).end()
+  const valid = sig.split(' ').some(s => {
+    try { return crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected)) }
+    catch { return false }
+  })
+  if (!valid) return res.status(401).end()
 
-    const event = JSON.parse(raw)
-    // process…
-
-    res.json({ ok: true })
-  }
-)
+  const event = JSON.parse(raw)
+  res.json({ ok: true })
+})
 ```
 
   </Tabs.Tab>
   <Tabs.Tab>
 
 ```python
-import os
-import hmac
-import base64
-import time
-import json
+import os, hmac, base64, time, json
 from fastapi import FastAPI, Request, HTTPException
 
 app = FastAPI()
 SECRET = os.environ["NA_WEBHOOK_SECRET"].removeprefix("wsec_")
 
-@app.post("/api/na-webhook")
-async def na_webhook(req: Request):
+@app.post("/cb")
+async def cb(req: Request):
     wid = req.headers.get("webhook-id")
     wts = req.headers.get("webhook-timestamp")
     wsig = req.headers.get("webhook-signature")
     if not (wid and wts and wsig):
         raise HTTPException(400)
-
     if abs(time.time() - int(wts)) > 300:
         raise HTTPException(401)
 
@@ -212,49 +171,54 @@ async def na_webhook(req: Request):
         raise HTTPException(401)
 
     event = json.loads(raw)
-    # process…
-
     return {"ok": True}
 ```
 
   </Tabs.Tab>
 </Tabs>
 
-## Локальная отладка
+## Body
 
-<Steps>
-
-### Туннель
-
-```bash
-ngrok http 3000
-# Forwarding https://abcd-1234.ngrok-free.app -> http://localhost:3000
+```json
+{
+  "type": "generation.completed",
+  "requestId": "req_abc",
+  "modelId": "fal-ai/flux/dev",
+  "userId": "u_…",
+  "completedAt": "…",
+  "result": { "images": [{"url":"https://s3.cloud.ru/…"}], "seed": 12345 }
+}
 ```
 
-### Submit на туннель
+Failed:
 
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://abcd-1234.ngrok-free.app/api/na-webhook' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"test"}'
+```json
+{
+  "type": "generation.failed",
+  "requestId": "req_abc",
+  "modelId": "…",
+  "failedAt": "…",
+  "error": { "code": "provider_error", "message": "…" }
+}
 ```
 
-### Смотрите логи
+## Чек-лист
 
-В ngrok web UI на `http://127.0.0.1:4040` — все входящие запросы, body, headers. Удобно дебажить подпись.
+- [ ] Используется raw body (НЕ JSON middleware) до валидации.
+- [ ] `webhook-timestamp` проверяется на свежесть (≤ 5 мин).
+- [ ] Подпись сравнивается через `timingSafeEqual` / `compare_digest` / `hash_equals`.
+- [ ] Дедуп по `webhook-id` (24h TTL).
+- [ ] Endpoint отвечает `200 OK` за < 30 сек, тяжёлая работа уходит в очередь.
+- [ ] При ошибке возвращается 5xx — gateway сам повторит до 6 раз.
 
-</Steps>
+## Retry-расписание
 
-## Re-trigger после ошибки
+| Попытка | Задержка |
+| --- | --- |
+| 2 | 1 минута |
+| 3 | 5 минут |
+| 4 | 30 минут |
+| 5 | 2 часа |
+| 6 | 5 часов |
 
-Если ваш приёмник упал и вернул 5xx — gateway сам ретраит до 6 раз с экспоненциальным backoff. Никаких действий с вашей стороны не нужно — поправьте код, дождитесь следующей попытки.
-
-Если все 6 попыток сгорели — реквест помечается `webhook_dead` в `/me/activity`. Можно поднять руками через `POST /me/activity/{requestId}/replay-webhook` (если эта ручка включена в вашем тарифе) либо просто скачать результат через `/queue/.../result`.
-
-## Чего НЕ делать
-
-- ❌ Не парсите body **до** проверки подписи. Используйте raw bytes.
-- ❌ Не сравнивайте подписи через `===`. Только `timingSafeEqual` / `compare_digest` / `hash_equals`.
-- ❌ Не игнорируйте `webhook-timestamp` — иначе уязвимы к replay.
-- ❌ Не делайте долгую работу синхронно в обработчике. Получили событие → положили в очередь → ответили `200`. Иначе уйдёте за timeout-ы.
+После 6-й — `webhook_dead` в `/me/activity`. Можно перечитать через `GET /queue/.../requests/{id}`.

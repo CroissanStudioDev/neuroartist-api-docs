@@ -1,11 +1,11 @@
 ---
 title: Коды ошибок
-description: Полный справочник ошибок gateway
+description: Машинно-читаемые коды и логика ветвления
 ---
 
 # Коды ошибок
 
-Все ошибки имеют единый envelope:
+Единый envelope:
 
 ```json
 {
@@ -15,158 +15,41 @@ description: Полный справочник ошибок gateway
 }
 ```
 
-`code` — стабильный machine-readable идентификатор. Логику ветвите по нему. `message` — человекочитаемое описание (может меняться). `details` — опциональный контекст, специфичный для кода.
+Ветвите по `code` (стабильный machine-readable). `message` — для человека (может меняться). `details` — context-specific.
 
-## По HTTP-статусу
+## Cheat-sheet
 
-### 400 — Bad Request
+| Status | Code | Когда | Что делать |
+| --- | --- | --- | --- |
+| 400 | `invalid_body` | Не прошёл zod | См. `details.issues` |
+| 400 | `invalid_query` | Query-параметр невалиден | См. `details.issues` |
+| 400 | `invalid_params` | Path-параметр невалиден | |
+| 400 | `invalid_json` | Тело не парсится | Проверьте Content-Type |
+| 400 | `minimum_topup` | < `MIN_TOPUP_RUB` | Увеличьте `amountRub` |
+| 401 | `unauthorized` | Нет валидного auth | Создайте новый ключ |
+| 401 | `invalid_signature` | Подпись webhook невалидна | (Только при приёме webhook от провайдера) |
+| 402 | `insufficient_balance` | Кредитов меньше | Top-up; `details: {required, available}` |
+| 403 | `forbidden` | Нет прав | |
+| 403 | `session_only` | API-ключ заблокирован на этой ручке | Используйте session |
+| 404 | `not_found` | Ресурс не существует или не ваш | (IDOR-guard, не различаются) |
+| 404 | `unknown_model` | Опечатка в `modelId` | `GET /models` |
+| 409 | `conflict` | Уникальный ключ занят | |
+| 413 | `asset_too_large` | Файл > `MAX_UPLOAD_BYTES` | Сожмите |
+| 413 | `payload_too_large` | Тело > `MAX_BODY_BYTES` | |
+| 415 | `unsupported_media_type` | Content-Type не allowlist | |
+| 415 | `unsupported_mime` | (Uploads) MIME не allowlist | См. allowed list в [/guides/uploads](/guides/uploads) |
+| 429 | `rate_limited` | IP/user/key лимит | `Retry-After` |
+| 429 | `key_limit_exceeded` | Месячный лимит ключа | Поднимите через `PATCH /me/keys/{id}` |
+| 429 | `too_many_sse_connections` | > `SSE_MAX_CONNECTIONS_PER_USER` | Закройте старые EventSource |
+| 500 | `internal_error` | Непредвиденно | Передайте `X-Request-ID` команде |
+| 500 | `generation_failed` | Провайдер вернул фатал | Refund автоматический |
+| 502 | `provider_error` | Провайдер 5xx | Повторите |
+| 502 | `payment_provider` | YooKassa | Повторите |
+| 503 | `provider_error` (с `Retry-After`) | Circuit breaker открыт | Подождите и повторите |
+| 503 | `storage_disabled` | (Uploads) S3 не настроен | Только в local-dev |
+| 504 | `timeout` | Sync `/run` истёк за 5 мин | См. 202 ответ — `requestId` для `/queue` |
 
-| Code | Описание |
-| --- | --- |
-| `invalid_body` | Тело запроса не прошло zod-валидацию. `details.issues` содержит список проблем. |
-| `invalid_query` | Query-параметр не прошёл валидацию. |
-| `invalid_params` | Path-параметр не прошёл валидацию. |
-| `invalid_headers` | Заголовок не прошёл валидацию. |
-| `invalid_json` | Тело не парсится как JSON. |
-| `validation_error` | Универсальная zod-ошибка (для нестандартных случаев). |
-| `minimum_topup` | Сумма top-up ниже `MIN_TOPUP_RUB`. |
-| `invalid_pricing_config` | (Admin) Pricing-config модели не прошёл валидацию. |
-
-### 401 — Unauthorized
-
-| Code | Описание |
-| --- | --- |
-| `unauthorized` | Нет валидной сессии или API-ключа. |
-| `invalid_signature` | (Webhooks) Подпись провайдера не прошла проверку. |
-
-### 402 — Payment Required
-
-| Code | Описание |
-| --- | --- |
-| `insufficient_balance` | Кредитов на балансе меньше, чем нужно. `details: {required, available}`. |
-
-### 403 — Forbidden
-
-| Code | Описание |
-| --- | --- |
-| `forbidden` | Аутентификация прошла, но нет прав на ресурс. |
-| `session_only` | Эта ручка требует session cookie. API-ключ заблокирован. |
-| `cannot_demote_self` | (Admin) Нельзя понизить роль самому себе. |
-
-### 404 — Not Found
-
-| Code | Описание |
-| --- | --- |
-| `not_found` | Ресурс не существует или не принадлежит вам (IDOR-guard). |
-| `unknown_model` | `modelId` нет в каталоге. |
-| `model_not_found` | Алиас `unknown_model`. |
-| `not_owned` | Применимо к `requestId` — ресурс принадлежит другому юзеру. |
-| `user_not_found` | (Admin) Пользователь не найден. |
-
-### 405 — Method Not Allowed
-
-| Code | Описание |
-| --- | --- |
-| `method_not_allowed` | На эндпоинте этот метод не реализован. |
-
-### 409 — Conflict
-
-| Code | Описание |
-| --- | --- |
-| `conflict` | Уникальный ключ уже занят (например, имя провайдера в admin). |
-| `name_conflict` | Конкретно — конфликт по имени. |
-
-### 413 — Payload Too Large
-
-| Code | Описание |
-| --- | --- |
-| `payload_too_large` | Тело запроса больше `MAX_BODY_BYTES`. |
-| `asset_too_large` | Загружаемый файл превысил `MAX_UPLOAD_BYTES` (10 MiB по умолчанию). |
-| `too_large` | (Webhooks) Тело webhook больше allowed. |
-
-### 415 — Unsupported Media Type
-
-| Code | Описание |
-| --- | --- |
-| `unsupported_media_type` | Content-Type не входит в allow-list. |
-| `unsupported_mime` | (Uploads) MIME файла не поддерживается. |
-
-### 422 — Unprocessable Entity
-
-| Code | Описание |
-| --- | --- |
-| `validation_error` | Семантическая ошибка валидации (мимо zod). |
-
-### 429 — Too Many Requests
-
-| Code | Описание |
-| --- | --- |
-| `rate_limited` | Превышен IP/user/api-key лимит. См. `Retry-After`. |
-| `rate_limit_exceeded` | Алиас `rate_limited`. |
-| `key_limit_exceeded` | Превышен месячный лимит расхода по этому API-ключу. |
-| `too_many_sse_connections` | Превышен `SSE_MAX_CONNECTIONS_PER_USER`. |
-
-### 500 — Internal Server Error
-
-| Code | Описание |
-| --- | --- |
-| `internal_error` | Непредвиденная ошибка. Логируется в Sentry, передайте `request_id` команде. |
-| `generation_error` | Generic ошибка генерации. |
-| `generation_failed` | Конкретно — провайдер вернул фатальный fail. |
-| `not_implemented` | Реализация на стороне провайдера ещё не подключена. |
-| `provider_not_implemented` | (Webhooks) Webhook от провайдера, не имеющего обработчика. |
-
-### 502 — Bad Gateway
-
-| Code | Описание |
-| --- | --- |
-| `provider_error` | Провайдер вернул 5xx. |
-| `payment_provider` | YooKassa вернула ошибку. |
-| `payment_provider_error` | Алиас `payment_provider`. |
-| `invoice_request_not_created` | Не удалось создать invoice в YooKassa. |
-| `yookassa_error` | YooKassa-специфичная ошибка. |
-
-### 503 — Service Unavailable
-
-| Code | Описание |
-| --- | --- |
-| `provider_error` (с `Retry-After`) | Circuit breaker открыт после серии 5xx у провайдера. |
-| `upstream_unavailable` | Провайдер не отвечает. |
-| `storage_disabled` | (Uploads) S3 не сконфигурирован. |
-
-### 504 — Gateway Timeout
-
-| Code | Описание |
-| --- | --- |
-| `timeout` | Sync-запрос (`/run`) не завершился за 5 минут. Используйте `requestId` из 202-ответа и продолжите через `/queue`. |
-
-## Особые форматы
-
-### Insufficient balance
-
-```json
-{
-  "code": "insufficient_balance",
-  "message": "Not enough credits",
-  "details": { "required": 12, "available": 5 }
-}
-```
-
-`details` всегда содержит точную сумму нехватки — удобно для UI.
-
-### Rate limit
-
-```http
-HTTP/1.1 429 Too Many Requests
-Retry-After: 47
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 0
-X-RateLimit-Reset: 1714050300
-
-{"code":"rate_limited","message":"Too many requests"}
-```
-
-### Validation
+## Validation error shape
 
 ```json
 {
@@ -181,12 +64,36 @@ X-RateLimit-Reset: 1714050300
 }
 ```
 
-## Идентификатор запроса
+## Insufficient balance
 
-Каждый ответ содержит `X-Request-ID` — UUID, присваиваемый на входе. При обращении в поддержку **обязательно** прикладывайте этот ID:
+```json
+{
+  "code": "insufficient_balance",
+  "message": "Not enough credits",
+  "details": { "required": 12, "available": 5 }
+}
+```
+
+Используйте `details.required - details.available` для UI-сообщения "не хватает 7 ₽".
+
+## Rate limit
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 47
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1714050300
+
+{"code":"rate_limited","message":"Too many requests"}
+```
+
+## X-Request-ID
+
+В каждом ответе:
 
 ```
 X-Request-ID: 01HXYZ…
 ```
 
-По нему мы найдём полный лог с middleware-цепочкой и upstream-вызовами.
+Передайте этот ID в support — по нему достанем полный лог.

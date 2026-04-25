@@ -1,74 +1,58 @@
 ---
 title: SSE-прогресс
-description: Стрим прогресса генерации через Server-Sent Events
+description: Push-стрим стадий генерации вместо polling
 ---
-
-import { Callout, Tabs } from 'nextra/components'
 
 # SSE-прогресс
 
-Async-генерация (`POST /queue/{modelId}`) возвращает `requestId` сразу. Чтобы получить terminal-результат не опросом, а push-стримом — подписывайтесь на SSE.
+Async-режим (`POST /queue`) возвращает `requestId` сразу. Чтобы получить terminal-результат push-ом, а не опросом — подписывайтесь на SSE.
 
-## Два эндпоинта
-
-| Эндпоинт | Что отдаёт |
-| --- | --- |
-| `GET /queue/{modelId}/requests/{requestId}/status/stream` | Лента статуса от провайдера (raw fal-формат) |
-| `GET /queue/{modelId}/requests/{requestId}/progress/stream` | Универсальная лента gateway-а с lifecycle-стадиями |
-
-Используйте `progress/stream` — он унифицирован и переживает рестарт backend-а (late-join).
-
-## Жизненный цикл
+## Endpoint
 
 ```
-queued → in_progress → uploading_assets → reconciling → completed
-                                                       ↘  failed
+GET /queue/{modelId}/requests/{requestId}/progress/stream
 ```
+
+Auth: API-key или session (через `credentials: 'include'` в браузере).
+
+## Формат фрейма
+
+```
+data: {"stage":"in_progress","requestId":"req_abc","timestamp":"…","payload":{…}}
+
+```
+
+`stage` ∈:
 
 | Стадия | Когда |
 | --- | --- |
 | `queued` | Submit принят, ждём слот у провайдера |
-| `in_progress` | Провайдер начал генерацию |
-| `uploading_assets` | Артефакты выгружаются в наш S3 |
-| `reconciling` | Списание кредитов корректируется по фактическому usage |
-| `completed` | Готово, можно забирать результат |
-| `failed` | Провайдер вернул error либо пайплайн упал |
+| `in_progress` | Провайдер начал |
+| `uploading_assets` | Артефакты выгружаются в S3 |
+| `reconciling` | Списание корректируется по факту |
+| `completed` | Готово, payload в `event.result` |
+| `failed` | Ошибка, причина в `event.error` |
+
+При `completed`:
+
+```json
+{
+  "stage": "completed",
+  "requestId": "req_abc",
+  "result": {
+    "images": [{"url":"https://s3.cloud.ru/…","width":768,"height":1024}],
+    "seed": 12345
+  }
+}
+```
+
+При `failed`:
+
+```json
+{ "stage": "failed", "requestId": "req_abc", "error": { "code": "provider_error", "message": "…" } }
+```
 
 ## Подключение
-
-<Tabs items={['curl (debug)', 'JavaScript (EventSource)', 'JavaScript (fetch + ReadableStream)']}>
-  <Tabs.Tab>
-
-```bash
-curl -N \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  https://api.neuroartist.ru/queue/fal-ai%2Fflux%2Fdev/requests/req_abc/progress/stream
-```
-
-`-N` отключает буферизацию у curl — нужно для построчного вывода SSE.
-
-  </Tabs.Tab>
-  <Tabs.Tab>
-
-```js
-// EventSource не поддерживает custom headers — ставьте session-cookie
-// или используйте вариант с fetch ниже
-const es = new EventSource(
-  `https://api.neuroartist.ru/queue/${encodeURIComponent(modelId)}/requests/${requestId}/progress/stream`,
-  { withCredentials: true }
-)
-
-es.onmessage = (e) => {
-  const event = JSON.parse(e.data)
-  console.log(event.stage, event)
-  if (event.stage === 'completed' || event.stage === 'failed') es.close()
-}
-
-es.onerror = () => es.close()
-```
-
-  </Tabs.Tab>
-  <Tabs.Tab>
 
 ```js
 import { fetchEventSource } from '@microsoft/fetch-event-source'
@@ -78,102 +62,48 @@ await fetchEventSource(
   {
     headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` },
     onmessage(msg) {
-      const event = JSON.parse(msg.data)
-      if (event.stage === 'completed' || event.stage === 'failed') {
-        throw new Error('done')
-      }
+      const e = JSON.parse(msg.data)
+      if (e.stage === 'completed') resolve(e.result)
+      if (e.stage === 'failed') reject(new Error(e.error?.message))
     }
   }
-).catch(() => {})
+)
 ```
 
-  </Tabs.Tab>
-</Tabs>
-
-## Формат события
-
-Frame:
-
-```
-data: {"stage":"in_progress","requestId":"req_abc","timestamp":"2026-04-25T10:00:01Z","payload":{...}}
-
-```
-
-Минимальный shape — `stage` + `requestId` + `timestamp`. Дополнительные поля зависят от стадии (`logs`, `progress` от провайдера, `assetIds` после re-host, `error` при failure).
-
-При `completed`:
-
-```json
-{
-  "stage": "completed",
-  "requestId": "req_abc",
-  "timestamp": "…",
-  "result": {
-    "images": [{ "url": "https://s3.cloud.ru/…", "width": 768, "height": 1024 }],
-    "seed": 12345
-  }
-}
-```
-
-При `failed`:
-
-```json
-{
-  "stage": "failed",
-  "requestId": "req_abc",
-  "timestamp": "…",
-  "error": { "code": "provider_error", "message": "…" }
-}
-```
+В браузере `EventSource` тоже работает (через session-cookie + `withCredentials: true`), но не поддерживает custom headers — для API-key используйте `fetchEventSource` или `fetch` с `ReadableStream`.
 
 ## Heartbeat
 
-Каждые `SSE_HEARTBEAT_MS` миллисекунд (по умолчанию 15 000) gateway шлёт comment-frame:
+Каждые `SSE_HEARTBEAT_MS` мс (default 15000):
 
 ```
 : ping
 ```
 
-Это держит соединение живым через reverse-proxy с idle-timeout-ом. Клиенту обрабатывать его не нужно — `EventSource` игнорирует comment-frames автоматически.
+Comment-фрейм для удержания соединения через reverse-proxy. Клиент игнорирует.
 
-## Лимит соединений на пользователя
+## Late-join
 
-`SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5) — максимум одновременных SSE-стримов с одного аккаунта. 6-й вернёт:
+Можно подключиться **после** terminal-стадии: gateway отдаст последнее событие и закроет стрим. Удобно для refresh страниц с сохранённым `requestId`.
+
+## Лимит
+
+`SSE_MAX_CONNECTIONS_PER_USER` (default 5). Превышение:
 
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 60
-
-{"code":"too_many_sse_connections","message":"Too many concurrent SSE connections"}
+{"code":"too_many_sse_connections"}
 ```
 
-Слот освобождается при закрытии стрима либо через TTL 1 час (self-healing на случай зависшего клиента).
+Слот освобождается при close либо TTL 1 час.
 
-<Callout type="warning">
-  Не открывайте новый SSE на каждый рендер. EventSource прекрасно переживает переключение вкладок, но течь будет — старые подключения не закрываются автоматически.
-</Callout>
+## Альтернатива — webhook
 
-## Late-join (присоединение позже)
-
-`progress/stream` поддерживает подключение **в любой момент** жизненного цикла, в том числе **после** terminal-стадии. Gateway сразу отдаст последнее известное событие, потом закроет стрим.
-
-Это удобно для UI, который монтируется уже после submit (например, после refresh страницы).
-
-## Когда лучше webhook вместо SSE
-
-| Вместо SSE используйте webhook когда | Почему |
+| Используйте webhook когда | Причина |
 | --- | --- |
-| Долгие генерации (видео > 5 минут) | SSE-соединение через мобильную сеть отвалится |
-| Pipeline без активного клиента | Сервер не может «не закрыть вкладку» |
-| Нужна гарантия доставки | Webhook ретраится, SSE — нет |
+| Видео > 5 мин | Мобильная сеть закроет SSE |
+| Серверный pipeline без UI | Некому держать соединение |
+| Нужны retries при ошибке доставки | SSE не ретраится |
 
 См. [Webhooks](/concepts/webhooks).
-
-## Регрессии и устранение
-
-| Симптом | Причина |
-| --- | --- |
-| Стрим обрывается через ~60 сек | Idle-timeout reverse-proxy | Снизьте `SSE_HEARTBEAT_MS` либо подправьте proxy timeout |
-| `429 too_many_sse_connections` | Утечка стримов на клиенте | Закрывайте `EventSource` после terminal-события |
-| Получили только heartbeat-ы, нет событий | Провайдер не публикует прогресс | Это норма — terminal придёт `completed`/`failed` |
-| После рестарта backend нет terminal | Poller-mode без webhook-ов | См. [архитектура: poller vs webhook](/concepts/webhooks#poller-vs-webhook) |

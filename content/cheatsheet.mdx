@@ -1,0 +1,152 @@
+---
+title: Cheatsheet
+description: Все эндпоинты на одной странице
+---
+
+# Cheatsheet
+
+Все публичные эндпоинты gateway-а. Базовый URL: `https://api.neuroartist.ru`.
+
+`s` — session-only · `a` — API-key или session · `—` — публичная.
+
+## Auth (`/api/auth/*`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| — | `POST` | `/api/auth/sign-up/email` | Регистрация |
+| — | `POST` | `/api/auth/sign-in/email` | Вход |
+| s | `POST` | `/api/auth/sign-out` | Выход |
+| — | `POST` | `/api/auth/forgot-password/email` | Отправить ссылку восстановления |
+| — | `POST` | `/api/auth/reset-password` | Установить новый пароль |
+| s | `GET` | `/api/auth/get-session` | Текущая сессия |
+| s | `POST` | `/api/auth/api-key/create` | Создать API-ключ |
+| s | `POST` | `/api/auth/api-key/list` | Список ключей |
+| s | `POST` | `/api/auth/api-key/delete` | Удалить ключ |
+
+## Каталог (`/models`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| — | `GET` | `/models` | Список моделей с фильтрами |
+| — | `GET` | `/models/{modelId}` | Schema, цена, описание |
+| a | `POST` | `/models/{modelId}/estimate` | Оценка стоимости (без списания) |
+
+## Генерация — sync (`/run`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| a | `POST` | `/run/{modelId}` | Submit + ждать результат до 5 мин |
+
+`?passthrough=1` — оригинальные URL-ы без re-host в S3.
+
+## Генерация — async (`/queue`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| a | `POST` | `/queue/{modelId}` | Submit, вернёт `requestId` |
+| a | `GET` | `/queue/{modelId}/requests/{requestId}` | Забрать результат |
+| a | `GET` | `/queue/{modelId}/requests/{requestId}/status` | Статус (one-shot) |
+| a | `GET` | `/queue/{modelId}/requests/{requestId}/status/stream` | Raw SSE статус |
+| a | `GET` | `/queue/{modelId}/requests/{requestId}/progress/stream` | **Унифицированный SSE** |
+| a | `PUT` | `/queue/{modelId}/requests/{requestId}/cancel` | Отмена |
+
+`POST /queue/{modelId}?webhook=https://your.app/cb` — callback вместо polling.
+
+## Профиль (`/me`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| a | `GET` | `/me` | Текущий пользователь + auth source |
+| s | `PATCH` | `/me` | Обновить name / image / lowBalanceEmailOptOut |
+| s | `GET` | `/me/sessions` | Активные сессии |
+| s | `DELETE` | `/me/sessions/{id}` | Ревокировать сессию |
+| a | `GET` | `/me/balance` | Баланс кредитов |
+| a | `GET` | `/me/transactions` | История transactions |
+| a | `GET` | `/me/usage` | Снимок расходов 5h/24h/7d/30d |
+| a | `GET` | `/me/usage/history` | Time-series |
+| a | `GET` | `/me/usage/by-model` | Расход по моделям |
+| a | `GET` | `/me/usage/by-key` | Расход по ключам |
+| a | `GET` | `/me/activity` | Лента запросов |
+| a | `GET` | `/me/activity/{requestId}` | Детали реквеста + assets |
+| s | `GET` | `/me/keys` | Список API-ключей |
+| s | `POST` | `/me/keys` | Создать ключ |
+| s | `PATCH` | `/me/keys/{id}` | Имя / monthlyLimitRub |
+| s | `DELETE` | `/me/keys/{id}` | Удалить ключ |
+| a | `GET` | `/me/payment-methods` | Сохранённые карты |
+| s | `POST` | `/me/payment-methods/{id}/default` | Сделать default |
+| s | `DELETE` | `/me/payment-methods/{id}` | Удалить карту |
+| s | `PATCH` | `/me/auto-topup` | Настроить авто-пополнение |
+| s | `GET` | `/me/webhook-secret` | Получить webhook secret |
+| s | `POST` | `/me/webhook-secret/rotate` | Ротировать secret |
+| s | `POST` | `/me/uploads` | Загрузить input-файл (multipart) |
+
+## Биллинг (`/billing`)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| s | `POST` | `/billing/topup` | Создать платёж YooKassa |
+| a | `GET` | `/billing/payments` | Список платежей |
+| a | `GET` | `/billing/payments/{id}` | Детали платежа |
+| s | `GET` | `/billing/payments/{id}/receipt` | Редирект на чек |
+
+## Health & Discovery
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| — | `GET` | `/` | API root metadata |
+| — | `GET` | `/health` | Liveness + статус БД |
+| — | `GET` | `/metrics` | Prometheus text |
+| — | `GET` | `/changelog.json` | Changelog feed |
+| — | `GET` | `/openapi.json` | OpenAPI 3.1 (EN) |
+| — | `GET` | `/openapi.ru.json` | OpenAPI 3.1 (RU) |
+| — | `GET` | `/docs` | Scalar UI |
+| — | `GET` | `/llms.txt` | LLM-friendly markdown (token-optimized) |
+| — | `GET` | `/llms-full.txt` | LLM-friendly markdown (full) |
+| — | `GET` | `/.well-known/agent-configuration` | Agent-auth discovery |
+
+## Webhooks (входящие, server-to-server)
+
+| | Метод | Путь | Что |
+| --- | --- | --- | --- |
+| sig | `POST` | `/webhooks/{providerId}` | Callback от провайдера (ED25519) |
+| ip | `POST` | `/webhooks/yookassa/notify` | Callback от YooKassa (IP whitelist) |
+
+## Headers
+
+```
+Authorization: Bearer na_live_xxxxxxxxxxxxxxxx
+Content-Type: application/json
+X-Request-ID: <uuid>                  ← в каждом ответе, прикладывайте к support
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: <unix-timestamp>
+Retry-After: <seconds>                ← при 429/503
+```
+
+## Envelope ошибок
+
+```json
+{ "code": "insufficient_balance", "message": "Not enough credits", "details": { "required": 12, "available": 5 } }
+```
+
+Ветвите по `code`. Полный список — [Errors](/concepts/errors).
+
+## Лимиты
+
+| Scope | Лимит |
+| --- | --- |
+| `POST /api/auth/sign-in/email` | 10 / 5 мин / IP |
+| `POST /api/auth/sign-up/email` | 5 / 5 мин / IP |
+| `POST /api/auth/forgot-password/email` | 3 / 10 мин / IP |
+| `POST /webhooks/*` | 100 / 1 мин / IP |
+| Генерации (`/run`, `/queue`) | 100 / час / user |
+| Любая ручка через API-ключ | 1000 / час / key |
+| Опционально, на ключ | `metadata.monthlyLimitRub` (₽/мес) |
+| SSE-стримы | 5 одновременных / user |
+
+## modelId со слешами
+
+```
+✓ /run/fal-ai/flux/dev
+✓ /run/fal-ai%2Fflux%2Fdev    (тоже работает, но не нужно)
+```

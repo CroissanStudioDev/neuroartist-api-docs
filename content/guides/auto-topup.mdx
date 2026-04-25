@@ -1,147 +1,59 @@
 ---
-title: Авто-пополнение баланса
-description: Настройка авто-charge при просадке ниже порога
+title: Авто-пополнение
+description: Авто-charge с сохранённой карты при просадке баланса
 ---
 
-import { Steps, Callout } from 'nextra/components'
+# Авто-пополнение
 
-# Авто-пополнение баланса
-
-Чтобы не получить `402 insufficient_balance` ночью посреди важного пайплайна — настройте авто-пополнение. Gateway сам спишет с сохранённой карты при просадке баланса ниже порога.
-
-## Принцип
+Чтобы не получать `402 insufficient_balance` посреди pipeline.
 
 ```
-balance < thresholdRub   →   списание amountRub с default payment-method
-                              ↓
-                    YooKassa charge → webhook → +amountRub в balance
+balance < thresholdRub  →  charge amountRub  →  webhook  →  +amountRub в balance
 ```
 
-Срабатывает **в момент попытки списания** за генерацию. Если кредитов не хватает — gateway пытается зарядить карту, дожидается webhook от YooKassa и продолжает с уже пополненного баланса.
+Срабатывает в момент попытки списания за генерацию. Не чаще раза в 60 секунд.
 
-Если auto-topup упал (карта отклонена, нет default метода) — обычная ошибка `402 insufficient_balance`.
-
-## Что нужно
-
-<Steps>
-
-### Сохранённая карта
-
-Совершите хотя бы один успешный top-up через UI или API. После оплаты YooKassa вернёт `payment_method_id`, gateway сохранит в `payment_method`.
+## Setup
 
 ```bash
-curl https://api.neuroartist.ru/me/payment-methods -b cookies.txt
-```
+# 1. Один раз заплатить через UI — gateway сохранит payment_method
+# (Top-up через дашборд /billing/topup; YooKassa возвращает payment_method_id, gateway его сохраняет)
 
-```json
-{
-  "methods": [
-    { "id": "pm_abc", "mask": "•••• 4242", "type": "bank_card", "default": false, "createdAt": "…" }
-  ]
-}
-```
-
-### Установите default
-
-Если карт несколько — отметьте одну как `default`:
-
-```bash
+# 2. Сделать карту default
 curl -X POST https://api.neuroartist.ru/me/payment-methods/pm_abc/default \
   -b cookies.txt
+
+# 3. Включить auto-topup
+curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
+  -H "Content-Type: application/json" -b cookies.txt \
+  -d '{"enabled":true,"thresholdRub":200,"amountRub":1000}'
 ```
 
-Auto-topup использует только `default`.
+`thresholdRub` ≥ `AUTO_TOPUP_MIN_THRESHOLD_RUB` (default 10).
+`amountRub` ∈ `[AUTO_TOPUP_MIN_AMOUNT_RUB, AUTO_TOPUP_MAX_AMOUNT_RUB]` (default 50–10 000).
 
-### Включите auto-topup
+## Выключить
 
 ```bash
 curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{"enabled": true, "thresholdRub": 200, "amountRub": 1000}'
+  -H "Content-Type: application/json" -b cookies.txt \
+  -d '{"enabled":false}'
 ```
 
-Параметры:
+Сохранённые `thresholdRub` / `amountRub` остаются — при `enabled:true` снова применятся.
 
-| Поле | Описание | Bounds |
-| --- | --- | --- |
-| `enabled` | Включить / выключить | `true` / `false` |
-| `thresholdRub` | Порог срабатывания | ≥ `AUTO_TOPUP_MIN_THRESHOLD_RUB` (по умолчанию 10) |
-| `amountRub` | Сумма пополнения | `[AUTO_TOPUP_MIN_AMOUNT_RUB, AUTO_TOPUP_MAX_AMOUNT_RUB]` (50–10 000 по умолчанию) |
-
-Все суммы — в **рублях**, целые.
-
-### Проверьте
-
-```bash
-curl https://api.neuroartist.ru/me -b cookies.txt
-```
-
-В ответе:
-
-```json
-{
-  "user": { … },
-  "auth": { … },
-  "autoTopup": {
-    "enabled": true,
-    "thresholdRub": 200,
-    "amountRub": 1000
-  }
-}
-```
-
-</Steps>
-
-## Защита от циклов
-
-Auto-topup **не может срабатывать чаще раза в 60 секунд** — даже если баланс мгновенно снова упал. Это защита от:
-
-- Сетевого глюка с YooKassa, когда списание прошло, а webhook не пришёл за 1 секунду.
-- Конкурентных submit-ов, дёрнувших проверку одновременно.
-
-## Логика выбора суммы
-
-Рекомендуется ставить `amountRub` равной 5–10 типичных генераций. Слишком маленькая сумма → будете часто видеть просадки и перерывы. Слишком большая → меньше прозрачности расходов.
+## Профили
 
 | Профиль | thresholdRub | amountRub |
 | --- | --- | --- |
-| Hobby (разовые тесты) | 50 | 200 |
+| Hobby | 50 | 200 |
 | Production server | 200 | 1 000 |
 | Heavy pipeline (видео) | 500 | 5 000 |
 
-## Выключение
+## Если auto-topup упал
 
-```bash
-curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{"enabled": false}'
-```
+(карта отклонена, нет default метода) — обычная ошибка `402 insufficient_balance` на текущем submit. Email + запись `topup_failed` в `/me/activity`.
 
-Сохранённые `thresholdRub`/`amountRub` остаются — при следующем `enabled: true` они применятся.
+## Альтернатива — cron
 
-## Уведомления
-
-При успешном auto-topup приходит email-нотификация (если не отключили). Запись появляется в `/me/transactions` с типом `topup` и описанием `Auto-topup`.
-
-При неудаче (карта отклонена) — отдельный email + запись `topup_failed` в `/me/activity`.
-
-## Дополнительно: low-balance email
-
-Параллельно с auto-topup работает **уведомление** о просадке ниже `LOW_BALANCE_THRESHOLD_RUB` (по умолчанию 100). Шлётся **один раз** до следующего пополнения. Отписаться:
-
-```bash
-curl -X PATCH https://api.neuroartist.ru/me \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{"lowBalanceEmailOptOut": true}'
-```
-
-## Что НЕ настраивается
-
-- **Расписание** — auto-topup только реактивный (по факту просадки), не cron-based.
-- **Отдельная карта на отдельный лимит** — система знает только про default метод.
-- **Несколько порогов** — только один пар `(threshold, amount)`.
-
-Если нужна расширенная логика — поднимайте свой scheduled job, дёргающий `POST /billing/topup` по cron.
+Если нужна более сложная логика (расписание, разные карты, batch-ы) — поднимите свой scheduled job, дёргающий `POST /billing/topup`. Auto-topup только реактивный.

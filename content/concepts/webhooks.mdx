@@ -1,83 +1,42 @@
 ---
 title: Webhooks
-description: Подписанные callbacks вместо опроса
+description: Подписанные callbacks от gateway → ваш сервис
 ---
-
-import { Callout, Steps } from 'nextra/components'
 
 # Webhooks
 
-Webhook — push-уведомление о завершении генерации. Gateway шлёт `POST` на ваш URL с подписью Svix-формата. Это альтернатива SSE для долгих и серверных пайплайнов.
+Push-уведомление о завершении генерации на ваш HTTPS-URL. Альтернатива polling и SSE для серверных pipelines.
 
 ## Когда использовать
 
-| Хотите | Решение |
+| Хочу | Решение |
 | --- | --- |
 | Real-time UI в браузере | [SSE](/concepts/sse) |
-| Серверный пайплайн без активного клиента | **Webhook** |
-| Видео-генерация > 5 минут | **Webhook** |
-| Гарантированная доставка | **Webhook** (есть retries) |
+| Серверный pipeline без активного клиента | **Webhook** |
+| Видео-генерация / batched job | **Webhook** |
+| Retries при ошибке | **Webhook** (6 попыток с backoff) |
 
-## Как подключить
+## Setup
 
-<Steps>
-
-### Подготовьте endpoint
-
-Любой публичный HTTPS-URL, отдающий `200 OK` после успешной обработки. Любой 4xx/5xx ответ — gateway повторит доставку с экспоненциальным backoff.
-
-### Получите webhook secret
+1. Получите webhook secret: `POST /me/webhook-secret/rotate` (session-only).
+2. Подготовьте HTTPS-endpoint, отвечающий `200 OK`.
+3. Передавайте `?webhook=<URL>` при submit:
 
 ```bash
-curl https://api.neuroartist.ru/me/webhook-secret -b cookies.txt
-```
-
-```json
-{ "secret": "wsec_base64_32_bytes_..." }
-```
-
-Если secret ещё не создан — `null`. Создайте через rotate:
-
-```bash
-curl -X POST https://api.neuroartist.ru/me/webhook-secret/rotate -b cookies.txt
-```
-
-```json
-{ "newSecret": "wsec_..." }
-```
-
-<Callout type="warning">
-  Secret показывается **один раз** при ротации. Сохраните в env вашего приложения. При компрометации — повторите rotate.
-</Callout>
-
-### Передайте `webhook` URL при submit
-
-Через query-параметр:
-
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai%2Fflux%2Fdev?webhook=https://your.app/api/na-webhook' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
+curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
+  -H "Authorization: Bearer na_live_xxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…"}'
 ```
 
-### Принимайте и валидируйте
-
-См. ниже секцию [Валидация подписи](#валидация-подписи).
-
-</Steps>
-
-## Формат запроса
-
-Headers:
+## Headers и body
 
 ```
-POST /api/na-webhook HTTP/1.1
+POST /cb HTTP/1.1
 Content-Type: application/json
 Webhook-Id: msg_abc123
 Webhook-Timestamp: 1714050000
 Webhook-Signature: v1,base64-encoded-hmac-sha256
-User-Agent: NeuroartistGateway/1.0
 ```
 
 Body — completed:
@@ -88,12 +47,8 @@ Body — completed:
   "requestId": "req_abc",
   "modelId": "fal-ai/flux/dev",
   "userId": "u_…",
-  "createdAt": "2026-04-25T10:00:00Z",
-  "completedAt": "2026-04-25T10:00:08Z",
-  "result": {
-    "images": [{ "url": "https://s3.cloud.ru/…", "width": 768, "height": 1024 }],
-    "seed": 12345
-  }
+  "completedAt": "…",
+  "result": { "images": [{"url":"https://s3.cloud.ru/…"}], "seed": 12345 }
 }
 ```
 
@@ -103,18 +58,17 @@ Body — failed:
 {
   "type": "generation.failed",
   "requestId": "req_abc",
-  "modelId": "fal-ai/flux/dev",
-  "createdAt": "…",
+  "modelId": "…",
   "failedAt": "…",
   "error": { "code": "provider_error", "message": "…" }
 }
 ```
 
-URLs в `result` уже переписаны на наш S3 (если не указан `?passthrough=1`).
+URL-ы в `result` уже переписаны на S3.
 
-## Валидация подписи
+## Валидация
 
-Формат — Svix-style. Подпись считается над `{webhook_id}.{timestamp}.{body}`:
+Подпись Svix-style — над `{webhook_id}.{timestamp}.{body}`:
 
 ```js
 import crypto from 'node:crypto'
@@ -122,42 +76,32 @@ import crypto from 'node:crypto'
 function verify(req, secret) {
   const id = req.headers['webhook-id']
   const ts = req.headers['webhook-timestamp']
-  const sig = req.headers['webhook-signature']  // 'v1,base64'
+  const sig = req.headers['webhook-signature']
 
-  // Защита от replay
-  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false  // anti-replay 5 мин
 
-  const payload = `${id}.${ts}.${req.rawBody}`
-  // secret хранится в формате 'wsec_base64' — декодируем base64-тело
   const key = Buffer.from(secret.replace(/^wsec_/, ''), 'base64')
-  const expected = 'v1,' + crypto
-    .createHmac('sha256', key)
-    .update(payload)
-    .digest('base64')
+  const expected = 'v1,' + crypto.createHmac('sha256', key)
+    .update(`${id}.${ts}.${req.rawBody}`).digest('base64')
 
-  // Сравниваем по signatures-list (через запятую — для ротации)
   return sig.split(' ').some(s =>
     crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected))
   )
 }
 ```
 
-<Callout type="error">
-  Никогда не сравнивайте подписи через `===`. Это уязвимо к timing-атакам. Используйте `crypto.timingSafeEqual` (Node), `hmac.compare_digest` (Python), `hash_equals` (PHP).
-</Callout>
+**Никогда** не сравнивайте подписи через `===` — timing-атака. Только `timingSafeEqual` / `compare_digest` / `hash_equals`.
 
 ## Идемпотентность
 
-Webhook может прийти повторно (ретрай после network blip). Дедупайте по `webhook-id` или `requestId`:
+Webhook может прийти повторно. Дедупайте по `webhook-id`:
 
 ```js
-const seen = await redis.set(`wh:${webhookId}`, '1', 'NX', 'EX', 86400)
+const seen = await redis.set(`wh:${id}`, '1', 'NX', 'EX', 86400)
 if (seen === null) return res.status(200).end()
 ```
 
-## Ретраи
-
-Если ваш endpoint вернул `4xx`/`5xx`/таймаут (> 30 сек), gateway повторяет доставку:
+## Retries
 
 | Попытка | Задержка |
 | --- | --- |
@@ -167,26 +111,12 @@ if (seen === null) return res.status(200).end()
 | 5 | 2 часа |
 | 6 | 5 часов |
 
-После 6-й попытки доставка прекращается, событие помечается `failed`. Все попытки логируются в `/me/activity`.
+После 6-й попытки доставка прекращается, реквест помечается `webhook_dead` в `/me/activity`.
 
-## Poller vs Webhook
+## Полный код приёмника
 
-Внутри gateway есть два режима доведения генерации до terminal-состояния:
+→ [Recipe: Receive webhooks](/guides/webhook-receiver) (Hono / Next / Express / FastAPI).
 
-| Режим | Когда |
-| --- | --- |
-| `poller` (default) | Gateway сам опрашивает провайдер каждые ~2с |
-| `webhook` | Provider шлёт callback на gateway, gateway — на ваш URL |
+## Внутренние webhooks (НЕ для вас)
 
-Это **внутренняя деталь** — для клиента разницы нет, оба пути дают одинаковый итоговый webhook на ваш URL. Различие важно только при self-host gateway: `poller` — без публичного URL, `webhook` — публичный URL обязателен.
-
-## Входящие webhooks (то, что gateway принимает)
-
-Это ручки **для провайдеров и платежей**, не для вас:
-
-| Эндпоинт | От кого | Защита |
-| --- | --- | --- |
-| `POST /webhooks/{providerId}` | fal.ai, replicate, azure | ED25519-подпись провайдера |
-| `POST /webhooks/yookassa/notify` | YooKassa | IP-whitelist + HMAC |
-
-В клиентский код ходить туда не нужно — они работают server-to-server между gateway и upstream-ами.
+`/webhooks/{providerId}` и `/webhooks/yookassa/notify` — это **входящие** server-to-server endpoints между gateway и upstream-ами (fal.ai, YooKassa). В клиентский код к ним обращаться не нужно.

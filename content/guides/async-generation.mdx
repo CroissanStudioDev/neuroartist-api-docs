@@ -1,218 +1,42 @@
 ---
 title: Async + SSE
-description: Submit, подписка на прогресс, забор результата
+description: Submit, стрим прогресса, забор результата
 ---
 
-import { Tabs, Steps, Callout } from 'nextra/components'
+# Async + SSE
 
-# Async-генерация через `/queue` + SSE
+Submit возвращает `requestId` сразу. Прогресс — через SSE.
 
-Async-режим даёт:
-
-- Мгновенный ответ с `requestId` (без ожидания terminal-состояния).
-- Реалтайм-прогресс через SSE.
-- Возможность держать сразу несколько генераций «в работе».
-- Отмену незавершённой генерации.
-
-## Полный цикл
-
-<Steps>
-
-### Submit
-
-```bash
-curl -X POST https://api.neuroartist.ru/queue/fal-ai/flux/dev \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"editorial portrait","image_size":"portrait_4_3"}'
-```
-
-```json
-{
-  "requestId": "req_abc",
-  "status": "IN_QUEUE",
-  "queuePosition": 1
-}
-```
-
-Кредиты уже списаны атомарно. Сохраните `requestId`.
-
-### Подпишитесь на прогресс
-
-```js
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-
-await fetchEventSource(
-  `https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/${requestId}/progress/stream`,
-  {
-    headers: { Authorization: `Bearer ${NA_API_KEY}` },
-    onmessage(msg) {
-      const event = JSON.parse(msg.data)
-      console.log(event.stage, event)
-
-      if (event.stage === 'completed') {
-        console.log('Done:', event.result)
-      }
-      if (event.stage === 'failed') {
-        console.error('Failed:', event.error)
-      }
-    }
-  }
-)
-```
-
-Стрим автоматически закроется после `completed`/`failed`. Подробнее — [SSE](/concepts/sse).
-
-### Заберите результат (если нужно)
-
-В большинстве кейсов событие `completed` уже содержит весь payload. Но можно перечитать:
-
-```bash
-curl 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-```
-
-### Отмена (опционально)
-
-```bash
-curl -X PUT 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/cancel' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-```
-
-Возможна только до завершения. Кредиты возвращаются.
-
-</Steps>
-
-## Альтернатива SSE — polling
-
-Если SSE не подходит (например, в окружении, где нельзя держать долгое соединение):
-
-```bash
-# Опрос статуса каждые 2 секунды
-while true; do
-  STATUS=$(curl -s 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/status' \
-    -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" | jq -r .status)
-  echo "$STATUS"
-  [[ "$STATUS" == "COMPLETED" || "$STATUS" == "FAILED" ]] && break
-  sleep 2
-done
-
-# Забор результата
-curl 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-```
-
-Учтите, что это съедает квоту API-key (1000 req/h) сильнее, чем один SSE-стрим.
-
-## Альтернатива SSE — webhook
-
-Самый правильный путь для серверных пайплайнов:
-
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/api/na-callback' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"editorial portrait"}'
-```
-
-После `completed`/`failed` gateway POST-ит JSON на ваш URL с подписью. Подробнее — [Webhooks](/concepts/webhooks).
-
-## Параллельные генерации
-
-Можно держать сразу несколько submit-ов «в работе»:
-
-```js
-const requestIds = await Promise.all([
-  submit({ prompt: 'red flower' }),
-  submit({ prompt: 'blue flower' }),
-  submit({ prompt: 'yellow flower' })
-])
-
-// Подписаться на 3 SSE сразу — норм, лимит 5 на юзера
-const results = await Promise.all(
-  requestIds.map(id => waitForCompletion(id))
-)
-```
-
-Лимит — `SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5). Превышение → `429 too_many_sse_connections`.
-
-## Смешанный паттерн (recommended)
-
-В проде часто оптимально:
-
-1. **Submit + webhook** для серверной части (idempotent, переживает рестарты).
-2. **SSE** для активного UI клиента (опционально, если есть открытая вкладка).
-
-Так клиент видит прогресс в реальном времени, а сервер всё равно получит финал даже если клиент закроется.
-
-## Late-join — подключение к уже завершённой генерации
-
-Если SSE-клиент монтируется **после** того, как генерация уже завершилась — gateway сразу отдаст последнее событие и закроет стрим:
-
-```js
-// Эта генерация уже completed 30 минут назад
-const requestId = 'req_abc'
-const es = new EventSource(`.../progress/stream`)
-es.onmessage = (e) => {
-  const event = JSON.parse(e.data)
-  // Получите stage: 'completed' и result
-  console.log(event)
-  es.close()
-}
-```
-
-Это сильно упрощает код перезагрузки страниц с сохранённым `requestId`.
-
-## Когда `?passthrough=1`
-
-Чтобы получить **сырые URL-ы провайдера** (без переписывания на S3):
-
-```bash
-curl 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc?passthrough=1' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-```
-
-Используйте только для отладки или если у вас свой механизм re-hosting. Иначе ссылки умрут через ~24 часа.
-
-## Полный код полного цикла
+## Полный код
 
 ```js
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 
 const NA_API_KEY = process.env.NA_API_KEY
+const BASE = 'https://api.neuroartist.ru'
 
 async function runAsync(modelId, input) {
   // 1. Submit
-  const submit = await fetch(
-    `https://api.neuroartist.ru/queue/${modelId}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${NA_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(input)
-    }
-  ).then(r => r.json())
+  const submit = await fetch(`${BASE}/queue/${modelId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${NA_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  }).then(r => r.json())
 
-  if (!submit.requestId) {
-    throw new Error(`Submit failed: ${submit.message}`)
-  }
+  if (!submit.requestId) throw new Error(`Submit failed: ${submit.message ?? submit.code}`)
 
   // 2. Wait via SSE
   return new Promise((resolve, reject) => {
     fetchEventSource(
-      `https://api.neuroartist.ru/queue/${modelId}/requests/${submit.requestId}/progress/stream`,
+      `${BASE}/queue/${modelId}/requests/${submit.requestId}/progress/stream`,
       {
         headers: { Authorization: `Bearer ${NA_API_KEY}` },
         onmessage(msg) {
-          const event = JSON.parse(msg.data)
-          if (event.stage === 'completed') resolve(event.result)
-          if (event.stage === 'failed') reject(new Error(event.error?.message))
+          const e = JSON.parse(msg.data)
+          if (e.stage === 'completed') resolve(e.result)
+          if (e.stage === 'failed') reject(Object.assign(new Error(e.error?.message), e.error))
         },
-        onerror(err) {
-          reject(err)
-        }
+        onerror(err) { reject(err) }
       }
     )
   })
@@ -222,6 +46,76 @@ const result = await runAsync('fal-ai/flux/dev', {
   prompt: 'editorial portrait',
   image_size: 'portrait_4_3'
 })
-
 console.log(result.images[0].url)
 ```
+
+## Pipeline
+
+```
+POST /queue/{modelId}                          → { requestId }
+GET  /queue/{modelId}/requests/{id}/progress/stream  ← SSE: queued → in_progress → completed
+GET  /queue/{modelId}/requests/{id}            → результат (можно перечитать)
+PUT  /queue/{modelId}/requests/{id}/cancel     → отмена с refund
+```
+
+## Polling вместо SSE
+
+Если SSE недоступен (serverless с лимитом 30 сек):
+
+```bash
+while true; do
+  STATUS=$(curl -s "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/status" \
+    -H "Authorization: Bearer na_live_xxxx" | jq -r .status)
+  [[ "$STATUS" == "COMPLETED" || "$STATUS" == "FAILED" ]] && break
+  sleep 2
+done
+
+curl "https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc" \
+  -H "Authorization: Bearer na_live_xxxx"
+```
+
+Расход — 1 квота API-ключа на каждый poll.
+
+## Webhook вместо SSE
+
+Самый правильный путь для серверных pipelines:
+
+```bash
+curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://your.app/cb' \
+  -H "Authorization: Bearer na_live_xxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"…"}'
+```
+
+После terminal-стадии gateway POST-ит подписанный JSON на ваш URL. → [Recipe: webhook receiver](/guides/webhook-receiver).
+
+## Параллельные запросы
+
+```js
+const ids = await Promise.all([
+  submit({ prompt: 'red flower' }),
+  submit({ prompt: 'blue flower' }),
+  submit({ prompt: 'yellow flower' })
+])
+const results = await Promise.all(ids.map(waitForCompletion))
+```
+
+Лимит SSE-стримов — `SSE_MAX_CONNECTIONS_PER_USER` (default 5).
+
+## Late-join
+
+Можно подключиться к `progress/stream` **после** terminal-стадии — gateway отдаст последнее событие и закроет стрим. Удобно для UI после refresh с сохранённым `requestId`.
+
+## Hybrid (recommended for prod)
+
+- **Submit + webhook** — серверный path (idempotent, переживает рестарты).
+- **SSE** — UX в браузере, опционально, поверх того же `requestId`.
+
+## Отмена
+
+```bash
+curl -X PUT https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc/cancel \
+  -H "Authorization: Bearer na_live_xxxx"
+```
+
+Кредиты возвращаются (refund-транзакция).

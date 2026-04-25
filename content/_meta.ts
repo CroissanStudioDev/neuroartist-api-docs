@@ -1,19 +1,20 @@
 export default {
   index: 'Введение',
-  quickstart: 'Быстрый старт',
+  quickstart: 'Quickstart',
+  cheatsheet: 'Cheatsheet',
+  '-- guides': {
+    type: 'separator',
+    title: 'Гайды'
+  },
+  guides: 'Recipes',
   '-- concepts': {
     type: 'separator',
     title: 'Концепции'
   },
-  concepts: 'Основы',
-  '-- guides': {
-    type: 'separator',
-    title: 'Практические сценарии'
-  },
-  guides: 'Гайды',
+  concepts: 'Платформа',
   '-- api': {
     type: 'separator',
-    title: 'Справочник API'
+    title: 'Reference'
   },
   api: 'API Reference'
 }

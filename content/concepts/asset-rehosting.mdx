@@ -1,108 +1,68 @@
 ---
 title: Хранение результатов
-description: Re-hosting артефактов в S3 — почему ссылки не протухают
+description: Артефакты в S3, не в CDN провайдера — ссылки не протухают
 ---
-
-import { Callout } from 'nextra/components'
 
 # Хранение результатов
 
-После завершения генерации gateway автоматически переписывает ссылки на артефакты — из CDN провайдера (где они живут несколько часов) в наш S3. Клиенту не нужно ничего менять.
+После завершения генерации gateway автоматически копирует артефакты из CDN провайдера в наш S3 (Cloud.ru) и переписывает URL-ы в payload. Клиенту менять ничего не нужно.
 
 ## Зачем
 
-CDN провайдеров — временный storage. Через ~24 часа ссылка возвращает 404, а часто и быстрее. У вас в БД может оказаться битая URL.
+CDN провайдеров — temporary storage (~24 часа, иногда меньше). У вас в БД будут битые ссылки. Наш S3:
 
-Наш S3 (Cloud.ru) хранит файлы пока вы не удалите их через `/me/activity`. Это даёт:
-
-- Долговременные ссылки в вашем коде.
-- Контроль удаления — GDPR-friendly, можно стереть всё для конкретного юзера.
-- Стабильный CDN с одинаковыми latency-ями для разных регионов.
-
-## Как работает
-
-При завершении generation pipeline:
-
-```
-┌──────────┐   ┌─────────┐   ┌──────────┐   ┌─────────────┐
-│ provider │ → │ gateway │ → │   S3     │ → │ rewritten   │
-│   CDN    │   │ download│   │ upload   │   │ URLs to you │
-└──────────┘   └─────────┘   └──────────┘   └─────────────┘
-```
-
-1. Gateway скачивает файл с CDN провайдера (max `ASSET_MAX_BYTES` = 500 MB).
-2. Загружает в наш S3 bucket с прозрачным `content-type`.
-3. Переписывает все URL-ы в payload результата на S3-ссылки.
-4. Возвращает вам уже переписанный payload.
-
-Этот процесс — синхронный относительно вашей подписки на `/queue/.../result` или webhook. На SSE он обозначается стадией `uploading_assets`.
-
-## Где это срабатывает
-
-- `POST /run/{modelId}` — синхронный режим, переписывание перед ответом.
-- `POST /queue/{modelId}` → `GET .../result` — переписывание перед выдачей результата.
-- Webhook от провайдера → ваш webhook — переписывание перед forwarding.
+- Долговременные ссылки.
+- GDPR-friendly — можно удалить всё для конкретного юзера.
+- Стабильный CDN с одинаковыми latency.
 
 ## Что переписывается
 
 - `images[].url`, `image.url`
 - `video.url`
 - `audio.url`
-- Все вложенные URL-ы из вложенных payload-shapes конкретных моделей (определяется per-provider).
+- Всё, что определено в provider-specific URL-extractor
 
-`seed`, `timings`, `metadata` — оставляются как есть.
+`seed`, `timings`, `metadata` — оставляем как есть.
 
-## Опциональный bypass — passthrough
+## Где работает
 
-Если вы хотите получить **исходные** ссылки от провайдера (для отладки, для интеграций с инструментами провайдера), добавьте `?passthrough=1` к ручке результата:
+| Ручка | Когда переписывает |
+| --- | --- |
+| `POST /run/{modelId}` | Перед ответом |
+| `GET /queue/.../requests/{id}` | Перед выдачей результата |
+| Webhook → ваш URL | Перед forwarding |
+
+## Bypass — passthrough
+
+Получить **исходные** URL провайдера:
 
 ```bash
-curl 'https://api.neuroartist.ru/queue/fal-ai%2Fflux%2Fdev/requests/req_abc?passthrough=1' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+curl 'https://api.neuroartist.ru/run/fal-ai/flux/dev?passthrough=1' …
+curl 'https://api.neuroartist.ru/queue/fal-ai/flux/dev/requests/req_abc?passthrough=1' …
 ```
 
-В ответе будут оригинальные `https://fal.media/...` URL-ы. Подразумевайте, что они умрут через несколько часов.
+Используйте только для отладки — ссылки умрут через несколько часов.
 
-То же работает для `/run/{modelId}?passthrough=1`.
+## Если upload упал
 
-## Что если upload упал
+Любая ошибка S3 (5xx, таймаут, > `ASSET_MAX_BYTES` = 500 MB) → graceful fallback: оставляем CDN-URL провайдера. Запрос **не падает**, генерация считается успешной.
 
-Любая ошибка S3 (5xx, таймаут, превышение `ASSET_MAX_BYTES`) — graceful fallback: gateway оставляет CDN-URL провайдера в результате. Запрос НЕ упадёт, генерация считается успешной.
+В `/me/activity/{requestId}` запись со статусом `failed` для конкретного asset-а. Скачайте URL к себе пораньше.
 
-В `/me/activity/{requestId}` будет запись об asset со статусом `failed`. Вы получите working ссылку — но она протухнет на стороне провайдера через несколько часов, скачайте её к себе пораньше.
+## Лимиты
 
-## Размер и MIME
-
-| Параметр | Значение по умолчанию |
+| Параметр | Значение |
 | --- | --- |
-| `ASSET_MAX_BYTES` | 500 MB (на один артефакт) |
-| Поддерживаемые MIME | `image/*`, `video/mp4`, `video/quicktime`, `video/webm`, `audio/*` |
-
-Артефакты сверх лимита не загружаются — будет fallback на CDN провайдера.
-
-## Жизненный цикл
-
-```
-pending → uploading → ready
-                    ↘ failed
-```
-
-Видно через `/me/activity/{requestId}` → `assets[].status`.
+| `ASSET_MAX_BYTES` | 500 MB / артефакт |
+| Allowed MIME | `image/*`, `video/mp4|quicktime|webm`, `audio/*` |
 
 ## Удаление
 
+Удалить весь реквест и его assets:
+
 ```bash
-# По одному реквесту — удалит все assets реквеста
 curl -X DELETE https://api.neuroartist.ru/me/activity/{requestId}/assets \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
+  -H "Authorization: Bearer na_live_xxxx"
 ```
 
-<Callout type="warning">
-  Удаление необратимо. После удаления — ссылка возвращает 404, восстановления нет. Скачайте к себе, если нужны архивы.
-</Callout>
-
-## Отдельный случай — input uploads
-
-Для `image-to-image` и `video-to-video` моделей вы заливаете input через `POST /me/uploads`. Эти файлы хранятся **в том же S3**, со своим `assetId`. Удаляются по той же модели — через `/me/activity` или после reaper TTL (если настроен).
-
-Подробнее — [Гайд: Загрузка файлов](/guides/uploads).
+Удаление необратимо — скачайте, если нужны архивы.

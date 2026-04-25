@@ -1,31 +1,19 @@
 ---
-title: Обзор API
-description: Базы — URL, аутентификация, формат ошибок, request-id
+title: Обзор
+description: Базовые URL, аутентификация, формат ошибок
 ---
 
-import { Callout } from 'nextra/components'
+# Обзор
 
-# Обзор API
+## URL
 
-## Базовые URL
+```
+Production   https://api.neuroartist.ru
+Staging      https://staging.neuroartist.ru
+Local dev    http://localhost:8000
+```
 
-| Окружение | URL |
-| --- | --- |
-| Production | `https://api.neuroartist.ru` |
-| Staging | `https://staging.neuroartist.ru` |
-| Local dev | `http://localhost:8000` |
-
-Все ручки относительно базового URL. Дальше в reference указывается только относительный путь (`POST /run/{modelId}`).
-
-## Формат
-
-- **Запросы:** `Content-Type: application/json` для JSON-bodies. `multipart/form-data` для `/me/uploads`.
-- **Ответы:** `Content-Type: application/json` (кроме SSE-стримов и `/metrics`).
-- **Кодировка:** UTF-8.
-- **Числа:** целые для кредитов и сумм. Float в timing-метаданных моделей.
-- **Даты:** ISO 8601 в UTC (`2026-04-25T10:00:00Z`).
-
-## Аутентификация
+## Auth
 
 Один из:
 
@@ -35,78 +23,69 @@ x-api-key: na_live_xxxxxxxxxxxxxxxx
 Cookie: better-auth.session_token=…
 ```
 
-Детали — [Concepts → Authentication](/concepts/authentication).
+Подробнее — [Аутентификация](/concepts/authentication).
+
+## Формат
+
+- Запросы: `Content-Type: application/json` (либо `multipart/form-data` для `/me/uploads`).
+- Ответы: `application/json` (кроме SSE и `/metrics`).
+- Кодировка: UTF-8.
+- Кредиты, суммы — целые числа.
+- Даты — ISO 8601 UTC (`2026-04-25T10:00:00Z`).
 
 ## Envelope ошибок
 
 ```json
-{
-  "code": "insufficient_balance",
-  "message": "Not enough credits",
-  "details": { "required": 12, "available": 5 }
-}
+{ "code": "insufficient_balance", "message": "Not enough credits", "details": { "required": 12, "available": 5 } }
 ```
 
-Ветвите по `code`. Полный список — [Concepts → Errors](/concepts/errors).
+Ветвите по `code` — стабильный machine-readable. Полный список — [Errors](/concepts/errors).
 
-## Request ID
-
-Каждый ответ — `X-Request-ID: 01HXYZ…`. Прикладывайте к support-обращениям.
-
-## Rate-limit headers
+## Стандартные headers
 
 ```
+X-Request-ID: 01HXYZ…              ← в каждом ответе
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 99
 X-RateLimit-Reset: 1714050300
-Retry-After: 47   (только при 429/503)
+Retry-After: 47                    ← при 429/503
 ```
-
-Детали — [Concepts → Rate limits](/concepts/rate-limits).
 
 ## CORS
 
 ```
-Access-Control-Allow-Origin: <любой origin из FRONTEND_ORIGINS allowlist>
+Access-Control-Allow-Origin: <FRONTEND_ORIGINS allowlist>
 Access-Control-Allow-Credentials: true
 Access-Control-Expose-Headers: X-Request-ID, X-RateLimit-*, Retry-After
 ```
 
-Cross-origin запросы из браузера должны идти с `credentials: include`, иначе session cookie не передастся.
+Cross-origin браузер → `credentials: 'include'` для session cookie.
 
-## OpenAPI и LLM-friendly docs
+## OpenAPI
 
 | URL | Что |
 | --- | --- |
-| `/openapi.json` | Полная OpenAPI 3.1 (EN) — для генерации SDK |
-| `/openapi.ru.json` | RU-overlay |
-| `/docs` | Scalar UI (interactive playground) |
+| `/openapi.json` | OpenAPI 3.1 (EN) — для генерации SDK |
+| `/openapi.ru.json` | RU overlay |
+| `/docs` | Scalar UI |
 | `/llms.txt` | Token-optimized markdown для LLM |
 | `/llms-full.txt` | Полная markdown-документация |
 
-В production-spec ручки `/admin/*` и `/webhooks/*` отфильтрованы — публичные клиенты их не видят.
+В production `/admin/*` и `/webhooks/*` отфильтрованы из спеки.
 
 ## Группы ручек
 
-| Группа | Префикс | Смысл |
+| Префикс | Группа | Назначение |
 | --- | --- | --- |
-| Auth | `/api/auth/*` | Better Auth — sign-up/in/out, password reset, OAuth |
-| Models | `/models/*` | Каталог моделей |
-| Run | `/run/{modelId}` | Sync-генерация |
-| Queue | `/queue/{modelId}/*` | Async-генерация + SSE |
-| Me | `/me/*` | Профиль, ключи, баланс, активность, transactions |
-| Billing | `/billing/*` | Top-up через YooKassa |
-| Webhooks | `/webhooks/*` | Incoming webhooks от провайдеров и YooKassa |
-| Integrations | `/integrations/*` | Adapter-эндпоинты для конкретных партнёров |
-| Health | `/health`, `/metrics` | Liveness, Prometheus |
-| OpenAPI | `/openapi.json`, `/docs`, `/llms*.txt` | Спека и docs |
-| Admin | `/admin/*` | Только session с `role=admin`. Не описывается в публичной спеке. |
+| `/api/auth/*` | Auth | Better Auth — sign-up/in/out, OAuth, ключи |
+| `/models/*` | Models | Каталог |
+| `/run/{modelId}` | Run | Sync-генерация |
+| `/queue/{modelId}/*` | Queue | Async-генерация + SSE |
+| `/me/*` | Me | Профиль, ключи, активность, баланс |
+| `/billing/*` | Billing | Top-up YooKassa |
+| `/webhooks/*` | Webhooks | Server-to-server (провайдеры, YooKassa) |
+| `/health`, `/metrics` | Health | Liveness, Prometheus |
 
 ## Версионирование
 
-API не версионируется в URL. Изменения вносятся **обратно совместимо**:
-
-- Добавление новых полей в ответ — допустимо.
-- Удаление полей или смена семантики — только через major-bump (новый префикс / pre-announce).
-
-Список изменений — `GET /changelog.json`.
+API не версионируется в URL. Изменения — обратно совместимо. Список — `GET /changelog.json`.

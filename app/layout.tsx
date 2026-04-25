@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Footer, Layout, Navbar } from 'nextra-theme-docs'
-import { Banner, Head } from 'nextra/components'
+import { Head } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 
@@ -10,18 +10,16 @@ export const metadata = {
     template: '%s — Neuroartist API Gateway'
   },
   description:
-    'Документация публичного developer-API gateway Neuroartist: модели, биллинг, аутентификация, SSE.'
+    'Один HTTPS-эндпоинт к генеративным моделям с кредитным биллингом и SSE-прогрессом. API-ключ, async-очередь, webhooks, OpenAPI 3.1.'
 }
-
-const banner = (
-  <Banner storageKey="na-gateway-docs-launch">
-    Документация Neuroartist API Gateway
-  </Banner>
-)
 
 const navbar = (
   <Navbar
-    logo={<b>Neuroartist API Gateway</b>}
+    logo={
+      <span className="font-semibold">
+        Neuroartist <span className="opacity-60">API Gateway</span>
+      </span>
+    }
     projectLink="https://github.com/neuroartist/neuroartist-api-gateway"
   />
 )
@@ -34,11 +32,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <Head />
       <body>
         <Layout
-          banner={banner}
           navbar={navbar}
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/neuroartist/docs/tree/main"
           footer={footer}
+          sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true, toggleButton: true }}
+          toc={{ backToTop: 'Наверх' }}
         >
           {children}
         </Layout>
