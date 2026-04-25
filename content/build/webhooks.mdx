@@ -3,26 +3,46 @@ title: Принять webhook
 description: Готовый код приёмника с валидацией подписи
 ---
 
-import { Tabs } from 'nextra/components'
+import { Tabs, Steps, Callout } from 'nextra/components'
 
 # Приём webhook
 
+Webhook удобнее SSE для серверных пайплайнов: gateway сам повторит доставку при ошибке, а вашему процессу не нужно держать долгое соединение.
+
 ## Подключение
 
+<Steps>
+
+### Получите webhook secret
+
 ```bash
-# 1. Получить webhook secret (session-only)
 curl -X POST https://api.neuroartist.ru/me/webhook-secret/rotate -b cookies.txt
 # {"secret":"base64-32-byte-secret"}
+```
 
-# 2. Поднять HTTPS endpoint (для local dev — ngrok)
+<Callout type="warning">
+  Secret показывается **один раз** — сохраните в env-переменные. При компрометации повторите ротацию: старый сразу инвалидируется.
+</Callout>
+
+### Поднимите HTTPS endpoint
+
+Любой публичный URL, отвечающий `200 OK`. Локально — туннель через ngrok или cloudflared:
+
+```bash
 ngrok http 3000
+# Forwarding https://abcd.ngrok-free.app -> http://localhost:3000
+```
 
-# 3. Передавать ?webhook=… при submit
+### Передавайте URL при submit
+
+```bash
 curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://abcd.ngrok-free.app/cb' \
-  -H "Authorization: Bearer na_live_xxxx" \
+  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…"}'
 ```
+
+</Steps>
 
 ## Код приёмника
 
@@ -116,7 +136,7 @@ import crypto from 'node:crypto'
 const SECRET = process.env.NA_WEBHOOK_SECRET
 const app = express()
 
-// IMPORTANT: raw body — НЕ express.json
+// Важно: raw body — НЕ express.json
 app.post('/cb', express.raw({ type: 'application/json' }), (req, res) => {
   const id = req.header('webhook-id')
   const ts = req.header('webhook-timestamp')
@@ -190,7 +210,7 @@ async def cb(req: Request):
 }
 ```
 
-Failed:
+Для failed:
 
 ```json
 {
@@ -202,14 +222,18 @@ Failed:
 }
 ```
 
-## Чек-лист
+## Чек-лист безопасности
 
-- [ ] Используется raw body (НЕ JSON middleware) до валидации.
-- [ ] `webhook-timestamp` проверяется на свежесть (≤ 5 мин).
+<Callout type="warning">
+  **Никогда** не сравнивайте подписи через `===` — это уязвимо к timing-атакам. Используйте `crypto.timingSafeEqual` (Node), `hmac.compare_digest` (Python), `hash_equals` (PHP).
+</Callout>
+
+- [ ] Используется raw body (**не** JSON middleware) до валидации.
+- [ ] `webhook-timestamp` проверяется на свежесть (≤ 5 минут — защита от replay).
 - [ ] Подпись сравнивается через `timingSafeEqual` / `compare_digest` / `hash_equals`.
-- [ ] Дедуп по `webhook-id` (24h TTL).
-- [ ] Endpoint отвечает `200 OK` за < 30 сек, тяжёлая работа уходит в очередь.
-- [ ] При ошибке возвращается 5xx — gateway сам повторит до 6 раз.
+- [ ] Дедуп по `webhook-id` с TTL 24 часа.
+- [ ] Endpoint отвечает `200 OK` за < 30 сек — тяжёлая работа уходит в очередь.
+- [ ] При временной ошибке возвращается 5xx — gateway сам повторит до 6 раз.
 
 ## Retry-расписание
 

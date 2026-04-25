@@ -1,5 +1,8 @@
 export default {
-  cheatsheet: 'Шпаргалка по API',
+  cheatsheet: {
+    title: 'Шпаргалка по API',
+    theme: { layout: 'full', toc: false }
+  },
   errors: 'Коды ошибок',
   'rate-limits': 'Лимиты запросов',
   sse: 'Формат SSE-стрима',

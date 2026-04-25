@@ -31,7 +31,7 @@ description: Машинно-читаемые коды и логика ветвл
 | 400 | `minimum_topup` | < `MIN_TOPUP_RUB` | Увеличьте `amountRub` |
 | 401 | `unauthorized` | Нет валидного auth | Создайте новый ключ |
 | 401 | `invalid_signature` | Подпись webhook невалидна | (Только при приёме webhook от провайдера) |
-| 402 | `insufficient_balance` | Кредитов меньше | Top-up; поля `required` и `available` |
+| 402 | `insufficient_balance` | Кредитов меньше | Пополните баланс; поля `required` и `available` |
 | 403 | `forbidden` | Нет прав | |
 | 403 | `forbidden` | API-ключ пришёл на session-only ручку | Используйте session |
 | 404 | `not_found` | Ресурс не существует или не ваш | (IDOR-guard, не различаются) |

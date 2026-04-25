@@ -79,7 +79,7 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 | Статус | Код | Что делать |
 | --- | --- | --- |
 | 401 | `unauthorized` | Ключ просрочен или невалиден — создайте новый |
-| 402 | `insufficient_balance` | Top-up через [`/billing/topup`](/reference/api/billing) |
+| 402 | `insufficient_balance` | Пополните баланс через [`/billing/topup`](/reference/api/billing) |
 | 404 | `unknown_model` | Опечатка в `modelId` — `GET /models` для списка |
 | 429 | `rate_limited` | См. `Retry-After` в headers |
 | 503 | `provider_error` | Upstream флапает — повторите через `Retry-After` сек |
