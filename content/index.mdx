@@ -1,0 +1,24 @@
+---
+title: Введение
+asIndexPage: true
+---
+
+# Neuroartist API Gateway
+
+Документация публичного developer-API gateway Neuroartist: каталог моделей, биллинг, аутентификация (session + API-key), SSE-стрим прогресса генераций.
+
+## Быстрый старт
+
+```bash
+curl -X POST https://gateway.neuroartist.ru/api/auth/sign-up/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"...","name":"You"}'
+```
+
+После входа — создайте API-ключ в дашборде и используйте его в заголовке `Authorization: Bearer na_live_...`.
+
+## Что дальше
+
+- Каталог моделей и playground.
+- Submit-запросы и SSE-стрим прогресса.
+- Биллинг и автопополнение через YooKassa.
