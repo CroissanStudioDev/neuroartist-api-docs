@@ -1,11 +1,11 @@
 ---
 title: Биллинг
-description: Кредитная модель, пополнение, авто-пополнение, чеки 54-ФЗ
+description: Баланс в рублях, пополнение, авто-пополнение, чеки 54-ФЗ
 ---
 
 # Биллинг
 
-Внутри API — **кредиты** (целые числа). 1 кредит ≈ 1 ₽.
+Баланс хранится в рублях, целочисленно. **Минимальное списание — 1 ₽**: если фактическая стоимость генерации меньше (например `0.05 ₽` за megapixel), всё равно списывается 1 ₽. Цены в каталоге (`priceRub`) — decimal и могут быть меньше рубля; ceil до 1 ₽ происходит на этапе биллинга.
 
 ## Жизненный цикл денег
 
@@ -15,11 +15,11 @@ top-up   →  balance  →  deduct (submit)  →  refund (если упало)
                         reconcile (по фактическому usage)
 ```
 
-- **Списание** атомарно при `POST /run` или `POST /queue/{modelId}`. Не хватает — `402 insufficient_balance`, **запрос провайдеру не уходит**.
+- **Списание** атомарно при `POST /run` или `POST /queue/{modelId}` — `creditCost` модели (integer, ≥ 1 ₽). Не хватает — `402 insufficient_balance`, **запрос провайдеру не уходит**.
 - **Возврат** — автоматически при upstream-ошибке.
-- **Reconciliation** — корректировка по факту (для per-second / per-megapixel моделей).
+- **Reconciliation** — для моделей с динамической ценой (per-second video, per-megapixel image) реальное списание уточняется после генерации.
 
-Все движения видны в `GET /me/transactions` с типами `topup` / `deduct` / `refund` / `grant`.
+Все движения видны в `GET /me/transactions`. Тип каждой записи — один из `topup`, `deduct`, `refund`, `grant`.
 
 ## Проверить баланс
 
@@ -29,6 +29,8 @@ curl https://api.neuroartist.ru/me/balance \
 # {"userId":"u_…","balance":248}
 ```
 
+`balance` — текущий остаток в рублях.
+
 ## Оценка стоимости перед запуском
 
 ```bash
@@ -36,14 +38,34 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"…","num_inference_steps":28}'
-# {"estimatedCostRub":8,"priceUnit":"image","quantity":1,"currency":"RUB"}
 ```
+
+```json
+{
+  "modelId": "flux/dev",
+  "modelAlias": "flux/dev",
+  "estimatedCostRub": 8,
+  "estimatedPriceRub": 8.0,
+  "priceUnit": "image",
+  "quantity": 1,
+  "currency": "RUB"
+}
+```
+
+| Поле | Что |
+| --- | --- |
+| `estimatedCostRub` | **Сколько спишется** при submit. Integer, минимум 1 ₽. |
+| `estimatedPriceRub` | Точная decimal-стоимость. Может быть < 1 ₽ (например `0.05` за megapixel). |
+| `priceUnit` | Единица измерения цены — `image`, `second`, `megapixel`, `request`, `1k_chars`. |
+| `quantity` | Сколько единиц получится при текущем input-е. |
 
 ## Пополнение
 
-Делается в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) → **Биллинг → Пополнить**. Минимальная сумма — 500 ₽. Оплата через YooKassa, чек 54-ФЗ формируется автоматически.
+Делается в дашборде [`gateway.neuroartist.ru`](https://gateway.neuroartist.ru) → **Биллинг → Пополнить**.
 
-После успешной оплаты карта сохраняется (с маской PAN) — чтобы не вводить реквизиты повторно и для авто-пополнения.
+- **Минимальная сумма — 500 ₽** (`MIN_TOPUP_RUB`). Меньше нельзя.
+- Оплата через YooKassa, чек 54-ФЗ формируется автоматически.
+- После успешной оплаты карта сохраняется (`payment_method_id` от YooKassa, с маской PAN) — чтобы не вводить реквизиты повторно и для авто-пополнения.
 
 ## Авто-пополнение
 
@@ -53,33 +75,35 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 balance < threshold  →  charge amount с default-карты  →  webhook  →  +amount
 ```
 
-Срабатывает в момент попытки списания. Не чаще раза в 60 секунд.
+Срабатывает в момент попытки списания за генерацию. Защита от дублей — Redis-lock `autotopup:{userId}` с TTL 60 секунд: пока активная попытка не вернула webhook, новая не запустится.
 
 В дашборде → **Биллинг → Авто-пополнение**:
 
-- **Threshold** — порог срабатывания (минимум 10 ₽).
-- **Amount** — сумма пополнения (50–10 000 ₽).
-- **Default-карта** — обязательно, выбирается отдельно.
+| Поле | Диапазон |
+| --- | --- |
+| `thresholdRub` | ≥ `AUTO_TOPUP_MIN_THRESHOLD_RUB` (10 ₽) |
+| `amountRub` | от `AUTO_TOPUP_MIN_AMOUNT_RUB` (50 ₽) до `AUTO_TOPUP_MAX_AMOUNT_RUB` (10 000 ₽) |
+| Default-карта | Обязательно. Без неё авто-пополнение не сработает. |
 
 Если списание не прошло (карта отклонена, нет default-метода) — обычная ошибка `402 insufficient_balance` на текущем submit + email-уведомление.
 
-## Чеки и история платежей
-
-Список платежей через API:
+## История платежей
 
 ```bash
 curl https://api.neuroartist.ru/billing/payments \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
 ```
 
-Сами чеки 54-ФЗ и PDF-выписки — в дашборде → **Биллинг → История**.
+Возвращает список с `id`, `yookassaId`, `status`, `creditsToGrant` (сумма в ₽), `amountKopecks`, `currency`, `createdAt`.
+
+Чеки 54-ФЗ и PDF-выписки — в дашборде → **Биллинг → История**.
 
 ## Welcome-бонус и уведомление о низком балансе
 
-- При регистрации — приветственный бонус, хватит на первые тесты.
-- При просадке ниже 100 ₽ — **один** email до следующего пополнения. Отписаться можно в дашборде.
+- **Welcome-бонус — 50 ₽** при регистрации (`WELCOME_BONUS_RUB`).
+- При просадке ниже **100 ₽** (`LOW_BALANCE_THRESHOLD_RUB`) — email-уведомление, **не чаще раза в 24 часа**. Отписаться: `PATCH /me { "lowBalanceEmailOptOut": true }` или флажок в дашборде.
 
 ## Дальше
 
-- [`/billing` в справочнике](/api/billing) — точные схемы платежей и чеков.
-- [Коды ошибок](/errors) — обработка `insufficient_balance` и `payment_provider`.
+- [`/billing` в справочнике](/api/billing) — точные схемы платежей.
+- [Коды ошибок](/errors) — обработка `insufficient_balance`, `minimum_topup`, `payment_provider`.

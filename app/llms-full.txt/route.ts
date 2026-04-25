@@ -41,7 +41,7 @@ export async function GET() {
     '# НейроХудожник API — полная документация',
     '',
     'Один HTTPS-эндпоинт к генеративным моделям (image / video / audio).',
-    'API-ключ, кредитный биллинг, SSE-прогресс, S3-хранение результатов.',
+    'API-ключ, рублёвый биллинг, SSE-прогресс, S3-хранение результатов.',
     '',
     '- Базовый URL: https://api.neuroartist.ru',
     '- OpenAPI: https://api.neuroartist.ru/openapi.json',

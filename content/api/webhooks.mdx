@@ -79,8 +79,8 @@ Webhook от YooKassa о состоянии платежа.
 
 **Что делает:**
 
-- На `payment.succeeded`: зачисляет кредиты, сохраняет `payment_method` в `payment_method` таблицу (если ещё нет), отправляет email-нотификацию.
-- На `payment.canceled`: помечает платёж `canceled`, кредиты не зачисляются.
+- На `payment.succeeded`: зачисляет средства, сохраняет `payment_method` в `payment_method` таблицу (если ещё нет), отправляет email-нотификацию.
+- На `payment.canceled`: помечает платёж `canceled`, деньги не зачисляются.
 
 **Ошибки:** `400 invalid_json` / `invalid_body`. Подпись/IP — игнорируются (200 OK с `processed: false, reason: …`), чтобы YooKassa не ретраила бесконечно.
 
