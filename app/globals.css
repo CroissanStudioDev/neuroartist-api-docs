@@ -43,6 +43,27 @@ html.dark .na-brand-text {
   opacity: 0.55;
 }
 
+/* Карточки <Cards.Card>: дефолт Nextra рендерит description (children)
+   ВЫШЕ title и без padding, что выглядит как баг. Переворачиваем порядок
+   и даём description тот же padding, что у title. */
+.nextra-card {
+  flex-direction: column-reverse !important;
+}
+.nextra-card > p {
+  margin: 0 !important;
+  padding: 1rem !important;
+  padding-top: 0 !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.5 !important;
+  color: rgb(0 0 0 / 60%);
+}
+html.dark .nextra-card > p {
+  color: rgb(255 255 255 / 65%);
+}
+.nextra-card > p > code {
+  font-size: 0.85em !important;
+}
+
 /* Хлебные крошки чуть крупнее и контрастнее, особенно в dark — дефолт
    text-gray-400 / text-sm на тёмном плохо читается. */
 .nextra-breadcrumb {

@@ -3,7 +3,7 @@ export default {
   quickstart: 'Быстрый старт',
   authentication: 'Аутентификация',
   generate: 'Каталог моделей',
-  build: 'Запросы',
+  build: 'Генерация',
   billing: 'Биллинг',
   errors: 'Коды ошибок',
   'rate-limits': 'Лимиты запросов',
