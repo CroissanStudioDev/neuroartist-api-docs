@@ -37,7 +37,7 @@ export async function GET() {
     '- Полная документация: https://docs.neuroartist.ru',
     '- OpenAPI: https://api.neuroartist.ru/openapi.json',
     '- llms-full.txt (вся документация): https://docs.neuroartist.ru/llms-full.txt',
-    '- Аутентификация: `Authorization: Bearer na_live_...` или `x-api-key: na_live_...`; session-only ручки требуют cookie.',
+    '- Аутентификация: `Authorization: Bearer na_live_...`; session-only ручки требуют cookie.',
     '- Первый image request: `POST /run/flux/dev` с JSON `{ "prompt": "...", "image_size": "portrait_4_3" }`.',
     '- Async: `POST /queue/{modelId}` → `requestId`; затем `GET /queue/{modelId}/requests/{requestId}/progress/stream`.',
     '- Webhook: добавьте `?webhook=https://your.app/cb`; проверяйте `webhook-id`, `webhook-timestamp`, `webhook-signature`.',

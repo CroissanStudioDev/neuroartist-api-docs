@@ -45,7 +45,7 @@ export async function GET() {
     '',
     '- Базовый URL: https://api.neuroartist.ru',
     '- OpenAPI: https://api.neuroartist.ru/openapi.json',
-    '- Аутентификация: `Authorization: Bearer na_live_...` или `x-api-key: na_live_...`; session-only ручки требуют cookie.',
+    '- Аутентификация: `Authorization: Bearer na_live_...`; session-only ручки требуют cookie.',
     '- Ошибки: стабильный машинный код в поле `error`; дополнительные поля зависят от ошибки.',
     '- Основные задачи: image generation → `/generate/images` и `/build/sync`; webhooks → `/build/webhooks`; top-up → `/manage/billing` и `/manage/auto-topup`.',
     '',
