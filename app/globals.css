@@ -29,3 +29,16 @@ samp {
   font-family:
     var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
+
+/* Брендированное название в navbar — явные цвета для обеих тем,
+   иначе наследование от <a class="x:text-current"> может оставить
+   текст тёмным на dark фоне в некоторых браузерах. */
+.na-brand-text {
+  color: rgb(0 0 0 / 92%);
+}
+html.dark .na-brand-text {
+  color: rgb(255 255 255 / 92%);
+}
+.na-brand-text-muted {
+  opacity: 0.55;
+}

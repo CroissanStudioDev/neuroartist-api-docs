@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Golos_Text } from 'next/font/google'
 import type { ReactNode } from 'react'
-import { Footer, LastUpdated, Layout, Navbar } from 'nextra-theme-docs'
+import { LastUpdated, Layout, Navbar } from 'nextra-theme-docs'
 import { Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
@@ -43,8 +43,12 @@ const navbar = (
     logo={
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
         <LogoMark size={26} />
-        <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
-          НейроХудожник <span style={{ opacity: 0.55 }}>API Docs</span>
+        <span
+          className="na-brand-text"
+          style={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+        >
+          НейроХудожник{' '}
+          <span className="na-brand-text-muted">API Docs</span>
         </span>
       </span>
     }
@@ -60,12 +64,6 @@ const navbar = (
   </Navbar>
 )
 
-const footer = (
-  <Footer>
-    <span style={{ opacity: 0.6 }}>{new Date().getFullYear()} © НейроХудожник.</span>
-  </Footer>
-)
-
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
@@ -79,9 +77,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          footer={footer}
           nextThemes={{ defaultTheme: 'system' }}
           sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true, toggleButton: true }}
+          themeSwitch={{ light: 'Светлая', dark: 'Тёмная', system: 'Системная' }}
           toc={{ backToTop: 'Наверх', title: 'Содержание' }}
           search={
             <Search
