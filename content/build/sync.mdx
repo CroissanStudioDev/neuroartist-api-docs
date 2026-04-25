@@ -179,7 +179,7 @@ try {
 }
 ```
 
-Полный список — [Коды ошибок](/reference/errors).
+Полный список — [Коды ошибок](/api/errors).
 
 ## Оценка стоимости перед запуском
 
@@ -200,10 +200,10 @@ curl -X POST https://api.neuroartist.ru/models/fal-ai/flux/dev/estimate \
 | --- | --- |
 | Часто > 60 секунд | [Асинхронная очередь и SSE](/build/async) |
 | Reverse-proxy режет соединения | [Webhook](/build/webhooks) |
-| Хотите параллельные запросы | [`/queue`](/reference/api/queue) |
+| Хотите параллельные запросы | [`/queue`](/api/queue) |
 
 ## Дальше
 
 - [Асинхронная очередь и SSE](/build/async) — для генераций, не помещающихся в HTTP-таймауты.
 - [Каталог моделей](/generate/models) — получить JSON Schema перед вызовом.
-- [`/run` в справочнике](/reference/api/run) — статусы, ошибки и `?passthrough=1`.
+- [`/run` в справочнике](/api/run) — статусы, ошибки и `?passthrough=1`.

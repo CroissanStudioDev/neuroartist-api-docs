@@ -103,7 +103,7 @@ Late-join — поддерживается. Подключение после te
 
 **Лимит:** `SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5). Превышение — `429 too_many_sse_connections`.
 
-Подробнее — [формат SSE-стрима](/reference/sse).
+Подробнее — [формат SSE-стрима](/build/async).
 
 ## `GET /queue/{modelId}/requests/{requestId}`
 
@@ -155,10 +155,10 @@ curl -X POST 'https://api.neuroartist.ru/queue/fal-ai/flux/dev?webhook=https://y
   ...
 ```
 
-После terminal-состояния сервис POST-ит JSON на ваш URL. Подробнее — [формат webhooks](/reference/webhooks).
+После terminal-состояния сервис POST-ит JSON на ваш URL. Подробнее — [формат webhooks](/build/webhooks).
 
 ## Дальше
 
 - [Асинхронная очередь и SSE](/build/async) — copy-paste `fetchEventSource`.
-- [Формат webhooks](/reference/webhooks) — server-to-server completion.
-- [Формат SSE-стрима](/reference/sse) — стадии progress stream.
+- [Формат webhooks](/build/webhooks) — server-to-server completion.
+- [Формат SSE-стрима](/build/async) — стадии progress stream.

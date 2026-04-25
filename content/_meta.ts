@@ -1,11 +1,9 @@
 export default {
   index: 'Введение',
-  '-- learn': { type: 'separator', title: 'Обучение' },
-  'get-started': 'Начало работы',
-  generate: 'Что генерировать',
-  '-- integrate': { type: 'separator', title: 'Интеграция' },
+  quickstart: 'Быстрый старт',
+  authentication: 'Аутентификация',
+  generate: 'Генерация',
   build: 'Интеграция',
-  manage: 'Аккаунт',
-  '-- ref': { type: 'separator', title: 'Справочник' },
-  reference: 'Справочник'
+  billing: 'Биллинг',
+  api: 'API Reference'
 }

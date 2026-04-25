@@ -5,15 +5,16 @@ export const dynamic = 'force-static'
 
 const PAGES = [
   ['Введение', 'index.mdx'],
-  ['Быстрый старт', 'get-started/quickstart.mdx'],
-  ['Аутентификация', 'get-started/authentication.mdx'],
-  ['Сгенерировать изображение', 'build/sync.mdx'],
+  ['Быстрый старт', 'quickstart.mdx'],
+  ['Аутентификация', 'authentication.mdx'],
+  ['Изображения', 'generate/images.mdx'],
+  ['Видео', 'generate/video.mdx'],
+  ['Аудио', 'generate/audio.mdx'],
+  ['Синхронные запросы /run', 'build/sync.mdx'],
   ['Асинхронная очередь и SSE', 'build/async.mdx'],
-  ['Приём webhook', 'build/webhooks.mdx'],
-  ['Биллинг и top-up', 'manage/billing.mdx'],
-  ['Авто-пополнение', 'manage/auto-topup.mdx'],
-  ['Шпаргалка по API', 'reference/cheatsheet.mdx'],
-  ['Коды ошибок', 'reference/errors.mdx']
+  ['Webhooks', 'build/webhooks.mdx'],
+  ['Биллинг', 'billing/index.mdx'],
+  ['Коды ошибок', 'api/errors.mdx']
 ] as const
 
 export async function GET() {

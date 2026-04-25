@@ -71,7 +71,7 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 | Долгая генерация с прогрессом | [Async + SSE](/build/async) |
 | Серверный pipeline без UI | [Приём webhook](/build/webhooks) |
 | img2img / video2video | [Загрузка файлов](/build/upload-inputs) |
-| Не закончились кредиты ночью | [Авто-пополнение](/manage/auto-topup) |
+| Не закончились кредиты ночью | [Авто-пополнение](/billing/auto-topup) |
 | Точная стоимость до запуска | `POST /models/{modelId}/estimate` |
 
 ## Если не сработало
@@ -79,9 +79,9 @@ curl -X POST https://api.neuroartist.ru/run/fal-ai/flux/dev \
 | Статус | Код | Что делать |
 | --- | --- | --- |
 | 401 | `unauthorized` | Ключ просрочен или невалиден — создайте новый |
-| 402 | `insufficient_balance` | Пополните баланс через [`/billing/topup`](/reference/api/billing) |
+| 402 | `insufficient_balance` | Пополните баланс через [`/billing/topup`](/api/billing) |
 | 404 | `unknown_model` | Опечатка в `modelId` — `GET /models` для списка |
 | 429 | `rate_limited` | См. `Retry-After` в headers |
 | 503 | `provider_error` | Upstream флапает — повторите через `Retry-After` сек |
 
-Полный справочник — [коды ошибок](/reference/errors).
+Полный справочник — [коды ошибок](/api/errors).

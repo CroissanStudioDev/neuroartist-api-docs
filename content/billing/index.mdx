@@ -72,7 +72,7 @@ curl -X DELETE https://api.neuroartist.ru/me/payment-methods/pm_abc -b cookies.t
 
 ## Авто-пополнение
 
-Списание с default-карты при просадке ниже порога. Подробнее — [/manage/auto-topup](/manage/auto-topup).
+Списание с default-карты при просадке ниже порога. Подробнее — [/billing/auto-topup](/billing/auto-topup).
 
 ```bash
 curl -X PATCH https://api.neuroartist.ru/me/auto-topup \
@@ -95,6 +95,6 @@ curl -L https://api.neuroartist.ru/billing/payments/pay_abc/receipt -b cookies.t
 
 ## Дальше
 
-- [Авто-пополнение](/manage/auto-topup) — включить списание с сохранённой карты.
-- [`/billing` в справочнике](/reference/api/billing) — платежи, чеки и статусы.
-- [Шпаргалка по API](/reference/cheatsheet) — быстрый список billing-ручек.
+- [Авто-пополнение](/billing/auto-topup) — включить списание с сохранённой карты.
+- [`/billing` в справочнике](/api/billing) — платежи, чеки и статусы.
+- [Шпаргалка по API](/api) — быстрый список billing-ручек.
