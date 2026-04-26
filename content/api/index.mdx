@@ -65,7 +65,7 @@ Cross-origin браузер → `credentials: 'include'` для session cookie.
 | `/llms.txt` | Token-optimized markdown для LLM |
 | `/llms-full.txt` | Полная markdown-документация |
 
-В production `/admin/*` и `/webhooks/*` отфильтрованы из спеки.
+В production `/admin/*` и `/webhooks/yookassa/*` отфильтрованы из спеки.
 
 ## Группы ручек
 
@@ -77,7 +77,7 @@ Cross-origin браузер → `credentials: 'include'` для session cookie.
 | `/v1/*` | OpenAI compatibility | OpenAI-shaped images API |
 | `/me/*` | Me | Профиль, ключи, активность, баланс |
 | `/billing/*` | Биллинг | Пополнение через YooKassa |
-| `/webhooks/*` | Входящие webhooks | Server-to-server (внутренние webhooks и YooKassa) |
+| `/webhooks/yookassa/*` | YooKassa callbacks | Server-to-server, не для клиентского кода |
 | `/health`, `/metrics` | Health | Liveness, Prometheus |
 
 ## Версионирование

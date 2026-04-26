@@ -30,7 +30,7 @@ description: Машинно-читаемые коды и логика ветвл
 | 400 | `invalid_json` | Тело не парсится | Проверьте Content-Type |
 | 400 | `minimum_topup` | < `MIN_TOPUP_RUB` | Увеличьте `amountRub` |
 | 401 | `unauthorized` | Нет валидного auth | Создайте новый ключ |
-| 401 | `invalid_signature` | Подпись webhook невалидна | (внутренние server-to-server webhooks) |
+| 401 | `invalid_signature` | Подпись YooKassa webhook невалидна | (внутренний server-to-server callback) |
 | 402 | `insufficient_balance` | Средств на балансе меньше | Пополните баланс; поля `required` и `available` |
 | 403 | `forbidden` | Нет прав | |
 | 403 | `forbidden` | Действие доступно только в дашборде | Сделайте действие в дашборде |

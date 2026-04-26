@@ -1,14 +1,14 @@
 ---
-title: /webhooks
-description: Внутренние server-to-server webhooks и YooKassa
+title: /webhooks/yookassa
+description: YooKassa payment webhooks
 ---
 
 import { Callout } from 'nextra/components'
 
-# `/webhooks`
+# `/webhooks/yookassa`
 
 <Callout type="info">
-  Это **входящие** webhooks — внутренние server-to-server. Клиентский код к ним обращаться не должен. Если вы интегрируете API в свой продукт, вам нужны **исходящие** webhooks (от нас → ваш приёмник) — см. [приём webhook](/build/webhooks) и [формат webhooks](/build/webhooks).
+  Это **входящие** webhooks от YooKassa — платёжный server-to-server callback. Клиентский код к ним обращаться не должен; они описаны здесь только для observability при настройке окружения.
 </Callout>
 
 ## `POST /webhooks/yookassa/notify`
@@ -45,6 +45,4 @@ Webhook от YooKassa о состоянии платежа.
 
 ## Дальше
 
-- [Формат webhooks](/build/webhooks) — исходящие callbacks от нас в ваш приёмник.
-- [Приём webhook](/build/webhooks) — пример кода клиентского endpoint-а.
 - [Биллинг](/api/billing) — платежи, которые завершает YooKassa webhook.

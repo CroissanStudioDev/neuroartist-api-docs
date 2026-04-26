@@ -338,28 +338,6 @@ Time-series.
 
 Подробнее — [Гайд](/billing#авто-пополнение).
 
-## Secret для подписи webhook
-
-### `GET /me/webhook-secret`
-
-**только из дашборда**
-
-```json
-{ "secret": "base64-32-byte-secret" }
-```
-
-Если secret ещё не создан, вернётся `null`.
-
-### `POST /me/webhook-secret/rotate`
-
-**только из дашборда**
-
-```json
-{ "secret": "base64-32-byte-secret" }
-```
-
-Показывается **один раз**.
-
 ## Загрузки
 
 ### `POST /me/uploads`
@@ -387,4 +365,3 @@ Time-series.
 
 - [Аутентификация](/authentication) — какие операции доступны только из дашборда.
 - [Биллинг](/billing) — баланс, платежи и сохранённые карты.
-- [Приём webhook](/build/webhooks) — как использовать signing secret.

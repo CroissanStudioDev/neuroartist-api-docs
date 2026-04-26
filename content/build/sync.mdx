@@ -185,7 +185,7 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 | Признак | Решение |
 | --- | --- |
 | Часто > 60 секунд | [Асинхронная очередь и polling](/build/async) |
-| Reverse-proxy режет соединения | [Webhook](/build/webhooks) |
+| Reverse-proxy режет соединения | [Async submit + worker](/build/async#serverless--edge-рантаймы) |
 | Хотите параллельные запросы | [`/queue`](/api/queue) |
 
 ## Дальше

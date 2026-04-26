@@ -11,8 +11,7 @@ const PAGES = [
   ['Видео', 'generate/video.mdx'],
   ['Аудио', 'generate/audio.mdx'],
   ['Синхронные запросы /run', 'build/sync.mdx'],
-  ['Асинхронная очередь и SSE', 'build/async.mdx'],
-  ['Webhooks', 'build/webhooks.mdx'],
+  ['Асинхронная очередь и polling', 'build/async.mdx'],
   ['Биллинг', 'billing/index.mdx'],
   ['Коды ошибок', 'errors.mdx']
 ] as const
@@ -29,7 +28,7 @@ export async function GET() {
   const body = [
     '# НейроХудожник API',
     '',
-    'Назначение: один HTTPS API для image / video / audio generation с рублёвым биллингом, async-очередью, SSE-прогрессом, webhooks и S3-хранением результатов.',
+    'Назначение: один HTTPS API для image / video / audio generation с рублёвым биллингом, async-очередью и S3-хранением результатов.',
     '',
     '## Быстрые факты для AI-агента',
     '',
@@ -39,8 +38,7 @@ export async function GET() {
     '- llms-full.txt (вся документация): https://docs.neuroartist.ru/llms-full.txt',
     '- Аутентификация: `Authorization: Bearer na_live_...`; часть ручек доступна только из дашборда.',
     '- Первый image request: `POST /run/flux/dev` с JSON `{ "prompt": "...", "image_size": "portrait_4_3" }`.',
-    '- Async: `POST /queue/{modelId}` → `requestId`; затем `GET /queue/{modelId}/requests/{requestId}/progress/stream`.',
-    '- Webhook: добавьте `?webhook=https://your.app/cb`; проверяйте `webhook-id`, `webhook-timestamp`, `webhook-signature`.',
+    '- Async: `POST /queue/{modelId}` → `requestId`; затем опрос `GET /queue/{modelId}/requests/{requestId}/status` каждые 2с до `state="completed"`, потом `GET /queue/{modelId}/requests/{requestId}` за результатом.',
     '- Ошибки: стабильный машинный код в поле `error`, например `insufficient_balance`, `rate_limited`, `provider_error`.',
     '',
     ...sections

@@ -56,19 +56,6 @@ console.log(result.images[0].url)
 - `GET /queue/{modelId}/requests/{id}` — финальный результат, можно перечитывать.
 - `PUT /queue/{modelId}/requests/{id}/cancel` — отмена с возвратом средств.
 
-## Webhook вместо polling
-
-Самый устойчивый путь для серверных pipeline-ов:
-
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app/cb' \
-  -H "Authorization: Bearer na_live_xxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"…"}'
-```
-
-После terminal-стадии сервис POST-ит подписанный JSON на ваш URL. → [готовый приёмник webhook](/build/webhooks).
-
 ## Параллельные запросы
 
 ```js
@@ -91,5 +78,4 @@ curl -X PUT https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/cancel \
 
 ## Дальше
 
-- [Приём webhook](/build/webhooks) — Hono, Next.js, Express и FastAPI.
 - [`/queue` в справочнике](/api/queue) — все методы async-очереди.

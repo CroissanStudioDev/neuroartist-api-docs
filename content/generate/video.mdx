@@ -1,11 +1,11 @@
 ---
 title: Видео
-description: text-to-video и image-to-video через async-очередь и webhooks
+description: text-to-video и image-to-video через async-очередь
 ---
 
 # Генерация видео
 
-Видео-модели — от 30 секунд до нескольких минут. Используйте **async + polling** или **webhooks**, sync-режим (`/run`) для них почти всегда отвалится по 5-минутному таймауту.
+Видео-модели — от 30 секунд до нескольких минут. Используйте **async + polling** через `/queue` — sync-режим (`/run`) для них почти всегда отвалится по 5-минутному таймауту.
 
 ## Минимальный пример
 
@@ -83,23 +83,19 @@ curl -X POST https://api.neuroartist.ru/queue/kling-video/v2/standard/image-to-v
 
 Источники изображения — [Загрузка файлов](/build/upload-inputs).
 
-## Webhook для production
+## Production-режим
 
-Видео-генерация может занять 1–5 минут. Если ваш runtime serverless или клиент закрывает вкладку — используйте webhook:
+Видео-генерация может занять 1–5 минут. Если ваш runtime serverless или клиент закрывает вкладку:
 
-```bash
-curl -X POST 'https://api.neuroartist.ru/queue/kling-video/v2/standard/text-to-video?webhook=https://your.app/cb' \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"…","duration":5}'
-```
+1. Сделайте submit через `POST /queue/{modelId}` и сохраните `requestId` в очередь/таблицу/Redis.
+2. Отдельный фоновый воркер (cron, queue worker, edge function на расписании) опрашивает `GET /queue/{modelId}/requests/{id}/status` каждые 5–10 секунд.
+3. Когда `state === "completed"` — забирает результат через `GET /queue/{modelId}/requests/{id}` и кладёт в свой store.
 
-Готовый код приёмника с подписью — [приём webhook](/build/webhooks).
+Эта схема не зависит от длительности HTTP-соединения и устойчива к рестартам клиентского рантайма.
 
 ## Что НЕ делать
 
 - ❌ Не используйте `POST /run` для видео — sync-таймаут 5 минут, видео часто длиннее.
-- ❌ Для batch-генерации используйте webhook, а не polling в цикле — надёжнее при большом числе задач.
 - ❌ Не игнорируйте `failed` стадию — генерация может упасть через несколько секунд после submit (например, NSFW-фильтр).
 
 ## Что приходит
@@ -137,5 +133,4 @@ curl -X POST https://api.neuroartist.ru/models/kling-video/v2/standard/text-to-v
 
 - [Все video-модели](/generate) — каталог с фильтрами.
 - [Async + polling](/build/async) — детали polling-loop.
-- [Приём webhook](/build/webhooks) — production-grade приёмник.
 - [Загрузка input-файлов](/build/upload-inputs) — для img2vid, vid2vid.
