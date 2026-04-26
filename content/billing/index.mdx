@@ -5,13 +5,13 @@ description: Баланс в рублях, пополнение, авто-поп
 
 # Биллинг
 
-Баланс хранится в рублях, целочисленно. **Минимальное списание — 1 ₽**: если фактическая стоимость генерации меньше (например `0.05 ₽` за megapixel), всё равно списывается 1 ₽. Цены в каталоге (`priceRub`) — decimal и могут быть меньше рубля; ceil до 1 ₽ происходит на этапе биллинга.
+Баланс — в рублях, decimal. **Минимальная единица учёта — 0.0001 ₽**: внутри биллинг-движок работает с целыми «units» (1 ₽ = 10 000 units), API-ответы конвертируются обратно в ₽ с дробью. Цены в каталоге (`priceRub`) могут быть меньше рубля и списываются точно — никакого пола в 1 ₽ нет.
 
 ## Как тратится баланс
 
-- **Списание** происходит атомарно при `POST /run` или `POST /queue/{modelId}` — на сумму `creditCost` модели (integer, ≥ 1 ₽). Если на балансе меньше — приходит `402 insufficient_balance`, генерация не запускается.
+- **Списание** происходит атомарно при `POST /run` или `POST /queue/{modelId}` — точно по `priceRub × quantity` с учётом скидки (округление вверх до 0.0001 ₽). Если на балансе меньше — приходит `402 insufficient_balance`, генерация не запускается.
 - **Возврат** — автоматически при ошибке генерации, той же суммой.
-- **Сверка по факту** — для моделей с динамической ценой (per-second video, per-megapixel image) точное списание уточняется после генерации; разница возвращается отдельной транзакцией.
+- **Сверка по факту** — для моделей с динамической ценой (per-second video, per-megapixel image) точное списание уточняется после генерации; разница возвращается отдельной транзакцией. Микроразницы ≤ 0.01 ₽ игнорируются — не плодим шумные транзакции.
 
 Все движения видны в `GET /me/transactions`. Тип каждой записи — один из `topup`, `deduct`, `refund`, `grant`.
 
@@ -20,10 +20,10 @@ description: Баланс в рублях, пополнение, авто-поп
 ```bash
 curl https://api.neuroartist.ru/me/balance \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-# {"userId":"u_…","balance":248}
+# {"userId":"u_…","balance":248.5}
 ```
 
-`balance` — текущий остаток в рублях.
+`balance` — текущий остаток в ₽ (decimal). Минимальная значимая дробь — 0.0001 ₽.
 
 ## Оценка стоимости перед запуском
 
@@ -38,7 +38,7 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 {
   "modelId": "flux/dev",
   "modelAlias": "flux/dev",
-  "estimatedCostRub": 8,
+  "estimatedCostRub": 8.0,
   "estimatedPriceRub": 8.0,
   "priceUnit": "image",
   "quantity": 1,
@@ -48,8 +48,8 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 
 | Поле | Что |
 | --- | --- |
-| `estimatedCostRub` | **Сколько спишется** при submit. Integer, минимум 1 ₽. |
-| `estimatedPriceRub` | Точная decimal-стоимость. Может быть < 1 ₽ (например `0.05` за megapixel). |
+| `estimatedCostRub` | **Сколько спишется** при submit, в ₽ (decimal, минимум 0.0001 ₽). |
+| `estimatedPriceRub` | Цена за единицу до округления. Совпадает с `estimatedCostRub`, если в input ровно 1 единица. |
 | `priceUnit` | Единица измерения цены — `image`, `second`, `megapixel`, `request`, `1k_chars`. |
 | `quantity` | Сколько единиц получится при текущем input-е. |
 
@@ -82,7 +82,7 @@ curl https://api.neuroartist.ru/billing/payments \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
 ```
 
-Возвращает список с `id`, `yookassaId`, `status`, `creditsToGrant` (сумма в ₽), `amountKopecks`, `currency`, `createdAt`.
+Возвращает список с `id`, `yookassaId`, `status`, `creditsToGrantRub` (сумма зачисления в ₽, с учётом промо-бонуса если был), `amountKopecks`, `currency`, `createdAt`.
 
 Чеки 54-ФЗ и PDF-выписки — в дашборде → **Биллинг → История**.
 

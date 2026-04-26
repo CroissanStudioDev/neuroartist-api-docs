@@ -57,17 +57,17 @@ curl https://api.neuroartist.ru/models/flux/dev
 
 | Поле | Описание |
 | --- | --- |
-| `creditCost` | **Целое число рублей** (≥ 1) — сколько списывается атомарно при submit. Источник правды для биллинга. |
+| `creditCost` | Цена за «типовую» 1 единицу в ₽ (admin-настройка, integer). Используется как fallback fixed-price для моделей без `priceUnit`. |
 | `priceRub` | Точная цена за единицу, decimal. **Может быть меньше 1 ₽** (например `0.05` за megapixel, `0.4` за second). |
 | `priceUnit` | Единица измерения цены: `image`, `second`, `megapixel`, `request`, `1k_chars`. |
 | `originalPriceRub` | Цена до скидки (если `discountPercent > 0`). |
 | `discountPercent` | Процент скидки (0–100). |
 
-`creditCost` — это **верхняя граница** списания, integer **минимум 1 ₽**. Если фактическая стоимость по `priceRub × quantity` меньше 1 ₽, спишется всё равно 1 ₽ (минимальная единица баланса).
+Списание точное: `priceRub × quantity` с учётом скидки, округление вверх до **0.0001 ₽** (минимальной единицы учёта). Никакого пола в 1 ₽ нет — субкопеечные модели остаются субкопеечными.
 
-Для моделей с динамической ценой (per-second video, per-megapixel image) реальное списание уточняется после генерации — reconciliation возвращает разницу как `refund`. См. [Биллинг](/billing#жизненный-цикл-денег).
+Для моделей с динамической ценой (per-second video, per-megapixel image) реальное списание уточняется после генерации — reconciliation возвращает разницу как `refund` (микроразницы ≤ 0.01 ₽ игнорируются). См. [Биллинг](/billing#жизненный-цикл-денег).
 
-Точный расчёт перед запуском с реальным input — `POST /models/{modelId}/estimate`. В ответе будут оба значения: `estimatedCostRub` (то, что спишется — integer, ≥ 1) и `estimatedPriceRub` (точная стоимость — decimal, может быть < 1).
+Точный расчёт перед запуском с реальным input — `POST /models/{modelId}/estimate`. В ответе будут оба значения: `estimatedCostRub` (сколько спишется, decimal ₽) и `estimatedPriceRub` (цена за единицу до округления).
 
 ### Schema input-а
 
