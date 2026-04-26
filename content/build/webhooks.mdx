@@ -7,7 +7,7 @@ import { Tabs, Steps, Callout } from 'nextra/components'
 
 # Приём webhook
 
-Webhook удобнее SSE для серверных пайплайнов: сервис сам повторит доставку при ошибке, а вашему процессу не нужно держать долгое соединение.
+Webhook удобнее polling для серверных пайплайнов: сервис сам доставит результат при завершении, а вашему процессу не нужно держать долгое соединение.
 
 ## Подключение
 
@@ -247,5 +247,5 @@ async def cb(req: Request):
 ## Дальше
 
 - [Формат webhooks](/build/webhooks) — заголовки, подпись и тело события.
-- [Асинхронная очередь и SSE](/build/async) — как получить `requestId`.
+- [Асинхронная очередь и polling](/build/async) — как получить `requestId`.
 - [`/me/webhook-secret`](/api/me#get-mewebhook-secret) — посмотреть текущий signing secret.

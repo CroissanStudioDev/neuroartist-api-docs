@@ -5,13 +5,11 @@ description: text-to-video и image-to-video через async-очередь и 
 
 # Генерация видео
 
-Видео-модели — от 30 секунд до нескольких минут. Используйте **async + SSE** или **webhooks**, sync-режим (`/run`) для них почти всегда отвалится по 5-минутному таймауту.
+Видео-модели — от 30 секунд до нескольких минут. Используйте **async + polling** или **webhooks**, sync-режим (`/run`) для них почти всегда отвалится по 5-минутному таймауту.
 
 ## Минимальный пример
 
 ```js
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-
 const NA_API_KEY = process.env.NA_API_KEY
 const BASE = 'https://api.neuroartist.ru'
 
@@ -30,20 +28,16 @@ const submit = await fetch(`${BASE}/queue/wan-25-preview/text-to-video`, {
 }).then(r => r.json())
 // { requestId: "req_abc", status: "IN_QUEUE" }
 
-// 2. Подписка на прогресс
-await new Promise((resolve, reject) => {
-  fetchEventSource(
-    `${BASE}/queue/wan-25-preview/text-to-video/requests/${submit.requestId}/progress/stream`,
-    {
-      headers: { Authorization: `Bearer ${NA_API_KEY}` },
-      onmessage(msg) {
-        const e = JSON.parse(msg.data)
-        if (e.stage === 'completed') resolve(e.result)
-        if (e.stage === 'failed') reject(new Error(e.error?.message))
-      }
-    }
-  )
-})
+// 2. Polling до terminal-состояния
+while (true) {
+  const status = await fetch(
+    `${BASE}/queue/wan-25-preview/text-to-video/requests/${submit.requestId}/status`,
+    { headers: { Authorization: `Bearer ${NA_API_KEY}` } }
+  ).then(r => r.json())
+  if (status.state === 'completed') break
+  if (status.state === 'failed') throw new Error(status.error ?? 'Generation failed')
+  await new Promise(r => setTimeout(r, 2000))
+}
 ```
 
 Результат:
@@ -89,7 +83,7 @@ curl -X POST https://api.neuroartist.ru/queue/kling-video/v2/standard/image-to-v
 
 Источники изображения — [Загрузка файлов](/build/upload-inputs).
 
-## Webhook вместо SSE (для production)
+## Webhook для production
 
 Видео-генерация может занять 1–5 минут. Если ваш runtime serverless или клиент закрывает вкладку — используйте webhook:
 
@@ -105,7 +99,7 @@ curl -X POST 'https://api.neuroartist.ru/queue/kling-video/v2/standard/text-to-v
 ## Что НЕ делать
 
 - ❌ Не используйте `POST /run` для видео — sync-таймаут 5 минут, видео часто длиннее.
-- ❌ Не открывайте 10 SSE-стримов сразу: лимит 5 на пользователя. Для batch — webhook.
+- ❌ Для batch-генерации используйте webhook, а не polling в цикле — надёжнее при большом числе задач.
 - ❌ Не игнорируйте `failed` стадию — генерация может упасть через несколько секунд после submit (например, NSFW-фильтр).
 
 ## Что приходит
@@ -142,6 +136,6 @@ curl -X POST https://api.neuroartist.ru/models/kling-video/v2/standard/text-to-v
 ## Дальше
 
 - [Все video-модели](/generate) — каталог с фильтрами.
-- [Async + SSE](/build/async) — детали стрима прогресса.
+- [Async + polling](/build/async) — детали polling-loop.
 - [Приём webhook](/build/webhooks) — production-grade приёмник.
 - [Загрузка input-файлов](/build/upload-inputs) — для img2vid, vid2vid.

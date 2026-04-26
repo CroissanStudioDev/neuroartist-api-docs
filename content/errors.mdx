@@ -43,7 +43,6 @@ description: Машинно-читаемые коды и логика ветвл
 | 415 | `unsupported_media_type` | (Uploads) MIME не allowlist | См. allowed list в [/build/upload-inputs](/build/upload-inputs) |
 | 429 | `rate_limited` | IP/user/key лимит | `Retry-After` |
 | 429 | `key_limit_exceeded` | Месячный лимит ключа | Поднимите через `PATCH /me/keys/{id}` |
-| 429 | `rate_limited` + `code: too_many_sse_connections` | > `SSE_MAX_CONNECTIONS_PER_USER` | Закройте старые EventSource |
 | 500 | `internal_error` | Непредвиденно | Передайте `X-Request-ID` команде |
 | 500 | `generation_failed` | Внутренняя фатальная ошибка | Refund автоматический |
 | 502 | `provider_error` | Внутренняя ошибка обработки | Повторите |

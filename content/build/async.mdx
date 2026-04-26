@@ -1,17 +1,15 @@
 ---
-title: Async + SSE
-description: Submit, стрим прогресса, забор результата
+title: Async + polling
+description: Submit, опрос статуса, забор результата
 ---
 
-# Асинхронная очередь и SSE
+# Асинхронная очередь
 
-Submit возвращает `requestId` сразу. Прогресс — через SSE.
+Submit возвращает `requestId` сразу. Прогресс — через polling каждые 2 секунды.
 
 ## Полный код
 
 ```js
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-
 const NA_API_KEY = process.env.NA_API_KEY
 const BASE = 'https://api.neuroartist.ru'
 
@@ -25,21 +23,23 @@ async function runAsync(modelId, input) {
 
   if (!submit.requestId) throw new Error(`Submit failed: ${submit.message ?? submit.code}`)
 
-  // 2. Wait via SSE
-  return new Promise((resolve, reject) => {
-    fetchEventSource(
-      `${BASE}/queue/${modelId}/requests/${submit.requestId}/progress/stream`,
-      {
-        headers: { Authorization: `Bearer ${NA_API_KEY}` },
-        onmessage(msg) {
-          const e = JSON.parse(msg.data)
-          if (e.stage === 'completed') resolve(e.result)
-          if (e.stage === 'failed') reject(Object.assign(new Error(e.error?.message), e.error))
-        },
-        onerror(err) { reject(err) }
-      }
-    )
-  })
+  // 2. Poll until terminal state
+  while (true) {
+    const status = await fetch(
+      `${BASE}/queue/${modelId}/requests/${submit.requestId}/status`,
+      { headers: { Authorization: `Bearer ${NA_API_KEY}` } }
+    ).then(r => r.json())
+
+    if (status.state === 'completed') break
+    if (status.state === 'failed') throw new Error(status.error ?? 'Generation failed')
+    await new Promise(r => setTimeout(r, 2000))
+  }
+
+  // 3. Fetch result
+  return fetch(
+    `${BASE}/queue/${modelId}/requests/${submit.requestId}`,
+    { headers: { Authorization: `Bearer ${NA_API_KEY}` } }
+  ).then(r => r.json())
 }
 
 const result = await runAsync('flux/dev', {
@@ -52,29 +52,11 @@ console.log(result.images[0].url)
 ## Эндпоинты в очереди
 
 - `POST /queue/{modelId}` — отправляет задачу, возвращает `requestId`.
-- `GET /queue/{modelId}/requests/{id}/progress/stream` — SSE-стрим прогресса. Стадии: `queued`, `in_progress`, `completed`, `failed`.
+- `GET /queue/{modelId}/requests/{id}/status` — статус: `in_queue` → `in_progress` → `completed` | `failed`.
 - `GET /queue/{modelId}/requests/{id}` — финальный результат, можно перечитывать.
 - `PUT /queue/{modelId}/requests/{id}/cancel` — отмена с возвратом средств.
 
-## Polling вместо SSE
-
-Если SSE недоступен (serverless с лимитом 30 сек):
-
-```bash
-while true; do
-  STATUS=$(curl -s "https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/status" \
-    -H "Authorization: Bearer na_live_xxxx" | jq -r .status)
-  [[ "$STATUS" == "COMPLETED" || "$STATUS" == "FAILED" ]] && break
-  sleep 2
-done
-
-curl "https://api.neuroartist.ru/queue/flux/dev/requests/req_abc" \
-  -H "Authorization: Bearer na_live_xxxx"
-```
-
-Расход — 1 квота API-ключа на каждый poll.
-
-## Webhook вместо SSE
+## Webhook вместо polling
 
 Самый устойчивый путь для серверных pipeline-ов:
 
@@ -98,17 +80,6 @@ const ids = await Promise.all([
 const results = await Promise.all(ids.map(waitForCompletion))
 ```
 
-Лимит SSE-стримов — `SSE_MAX_CONNECTIONS_PER_USER` (default 5).
-
-## Подключение после завершения
-
-Можно подключиться к `progress/stream` **после** terminal-стадии — сервис отдаст последнее событие и закроет стрим. Удобно для UI после refresh с сохранённым `requestId`.
-
-## Гибридный паттерн для production
-
-- **Submit + webhook** — серверный path (idempotent, переживает рестарты).
-- **SSE** — UX в браузере, опционально, поверх того же `requestId`.
-
 ## Отмена
 
 ```bash
@@ -120,6 +91,5 @@ curl -X PUT https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/cancel \
 
 ## Дальше
 
-- [Формат SSE-стрима](/build/async) — стадии и heartbeat-фреймы.
 - [Приём webhook](/build/webhooks) — Hono, Next.js, Express и FastAPI.
 - [`/queue` в справочнике](/api/queue) — все методы async-очереди.

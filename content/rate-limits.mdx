@@ -21,7 +21,6 @@ Retry-After: 47
 | User | 100 / час | `POST /run/*`, `POST /queue/*` |
 | API-ключ | 1000 / час | Любая ручка через ключ |
 | API-ключ | `monthlyLimitRub` (опц.) | Расход ₽ на ключ за месяц → `429 key_limit_exceeded` |
-| User | 5 одновременных | SSE-стримы прогресса |
 | IP | 100 / 1 мин | `POST /webhooks/*` |
 
 ## Retry-стратегия
@@ -62,4 +61,4 @@ async function callWithRetry(url, init, maxRetries = 3) {
 ## Дальше
 
 - [Коды ошибок](/errors) — как ветвить по `error`.
-- [Асинхронная очередь и SSE](/build/async) — как не упереться в лимит SSE.
+- [Асинхронная очередь и polling](/build/async) — как организовать async-генерацию.

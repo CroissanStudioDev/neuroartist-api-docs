@@ -135,26 +135,12 @@ curl https://api.neuroartist.ru/models/flux/dev | jq .schema
 
 Это не ошибка — генерация продолжается асинхронно. Подключитесь по `requestId`:
 
-<Tabs items={['Polling', 'SSE-стрим']}>
-  <Tabs.Tab>
-
 ```bash
 curl https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/status \
   -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
 ```
 
-  </Tabs.Tab>
-  <Tabs.Tab>
-
-```bash
-curl https://api.neuroartist.ru/queue/flux/dev/requests/req_abc/progress/stream \
-  -H "Authorization: Bearer na_live_xxxxxxxxxxxxxxxx"
-```
-
-  </Tabs.Tab>
-</Tabs>
-
-Подробнее — [Асинхронная очередь и SSE](/build/async).
+Подробнее — [Асинхронная очередь и polling](/build/async).
 
 ## Обработка ошибок
 
@@ -198,12 +184,12 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 
 | Признак | Решение |
 | --- | --- |
-| Часто > 60 секунд | [Асинхронная очередь и SSE](/build/async) |
+| Часто > 60 секунд | [Асинхронная очередь и polling](/build/async) |
 | Reverse-proxy режет соединения | [Webhook](/build/webhooks) |
 | Хотите параллельные запросы | [`/queue`](/api/queue) |
 
 ## Дальше
 
-- [Асинхронная очередь и SSE](/build/async) — для генераций, не помещающихся в HTTP-таймауты.
+- [Асинхронная очередь и polling](/build/async) — для генераций, не помещающихся в HTTP-таймауты.
 - [Каталог моделей](/generate) — получить JSON Schema перед вызовом.
 - [`/run` в справочнике](/api/run) — статусы, ошибки и `?passthrough=1`.

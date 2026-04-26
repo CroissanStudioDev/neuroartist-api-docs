@@ -79,7 +79,7 @@ na auth whoami     # короткое user-id + роль
 | `na run <model> -i …` | Синхронная генерация (изображения, короткие задачи) |
 | `na queue submit <model> -i …` | Async-постановка в очередь |
 | `na queue status <id>` | Статус задачи в очереди |
-| `na queue stream <id>` | SSE-прогресс (NDJSON-строки в `--json`-режиме) |
+| `na queue stream <id>` | Polling прогресса (NDJSON-строки в `--json`-режиме) |
 | `na queue result <id>` | Финальный результат |
 | `na queue cancel <id>` | Отмена с возвратом средств |
 | `na balance` | Текущий баланс |

@@ -81,11 +81,9 @@ curl -X POST https://api.neuroartist.ru/run/flux/dev/image-to-image \
 
 ## Длинные генерации
 
-FLUX dev/pro — 3–10 секунд. Если **batched** или **upscale-модель** превышает 60 секунд, переходите на async с SSE:
+FLUX dev/pro — 3–10 секунд. Если **batched** или **upscale-модель** превышает 60 секунд, переходите на async с polling:
 
 ```js
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-
 const submit = await fetch(
   'https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra',
   {
@@ -98,20 +96,25 @@ const submit = await fetch(
   }
 ).then(r => r.json())
 
-// Подписка на прогресс
-fetchEventSource(
-  `https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra/requests/${submit.requestId}/progress/stream`,
-  {
-    headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` },
-    onmessage(msg) {
-      const e = JSON.parse(msg.data)
-      if (e.stage === 'completed') console.log(e.result.images[0].url)
-    }
-  }
-)
+// Polling до завершения
+while (true) {
+  const s = await fetch(
+    `https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra/requests/${submit.requestId}/status`,
+    { headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` } }
+  ).then(r => r.json())
+  if (s.state === 'completed') break
+  if (s.state === 'failed') throw new Error(s.error)
+  await new Promise(r => setTimeout(r, 2000))
+}
+
+const result = await fetch(
+  `https://api.neuroartist.ru/queue/flux-pro/v1.1-ultra/requests/${submit.requestId}`,
+  { headers: { Authorization: `Bearer ${process.env.NA_API_KEY}` } }
+).then(r => r.json())
+console.log(result.images[0].url)
 ```
 
-Подробнее — [асинхронная очередь и SSE](/build/async).
+Подробнее — [асинхронная очередь и polling](/build/async).
 
 ## Что вернётся
 
@@ -152,5 +155,5 @@ curl -X POST https://api.neuroartist.ru/models/flux/dev/estimate \
 
 - [Все image-модели](/generate) — каталог с фильтрами.
 - [Загрузка input-файлов](/build/upload-inputs) — для img2img, inpainting.
-- [Async + SSE](/build/async) — для длинных пайплайнов.
+- [Async + polling](/build/async) — для длинных пайплайнов.
 - [Приём webhook](/build/webhooks) — для серверной обработки без UI.

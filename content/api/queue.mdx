@@ -1,15 +1,15 @@
 ---
 title: /queue
-description: Async-генерация — submit, status, result, SSE, cancel
+description: Async-генерация — submit, status, result, cancel
 ---
 
 import { Callout } from 'nextra/components'
 
 # `/queue`
 
-Async-режим: submit возвращает `requestId` сразу, terminal-состояние получаете через polling, SSE или webhook.
+Async-режим: submit возвращает `requestId` сразу, terminal-состояние получаете через polling или webhook.
 
-Концептуальный гайд — [Async + SSE](/build/async).
+Концептуальный гайд — [Async + polling](/build/async).
 
 ## `POST /queue/{modelId}`
 
@@ -56,58 +56,19 @@ curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app
 
 ```json
 {
-  "request_id": "req_abc",
-  "status": "IN_PROGRESS",
+  "state": "in_progress",
   "queue_position": 0,
   "logs": [ { "level": "info", "message": "Loading model", "timestamp": "…" } ]
 }
 ```
 
-`status` ∈ {`IN_QUEUE`, `IN_PROGRESS`, `COMPLETED`, `FAILED`}.
+`state` ∈ {`in_queue`, `in_progress`, `completed`, `failed`}.
 
 **Ошибки:** `404 not_found`.
 
-## `GET /queue/{modelId}/requests/{requestId}/status/stream`
-
-SSE с raw-статусом генерации.
-
-```
-data: {"status":"IN_PROGRESS","logs":[…]}
-
-data: {"status":"COMPLETED","request_id":"req_abc"}
-
-```
-
-Закрывается после terminal-состояния. Heartbeat каждые 15 сек (`: ping`).
-
-Используйте `progress/stream` ниже — он унифицированный и удобнее.
-
-## `GET /queue/{modelId}/requests/{requestId}/progress/stream`
-
-Унифицированный SSE — lifecycle API.
-
-```
-data: {"stage":"queued","requestId":"req_abc","timestamp":"…"}
-
-data: {"stage":"in_progress","requestId":"req_abc","timestamp":"…","payload":{…}}
-
-data: {"stage":"uploading_assets","requestId":"req_abc","timestamp":"…"}
-
-data: {"stage":"completed","requestId":"req_abc","timestamp":"…","result":{…}}
-
-```
-
-Стадии: `queued` → `in_progress` → `uploading_assets` → `reconciling` → `completed` | `failed`.
-
-Late-join — поддерживается. Подключение после terminal-стадии сразу отдаст последнее событие.
-
-**Лимит:** `SSE_MAX_CONNECTIONS_PER_USER` (по умолчанию 5). Превышение — `429 too_many_sse_connections`.
-
-Подробнее — [формат SSE-стрима](/build/async).
-
 ## `GET /queue/{modelId}/requests/{requestId}`
 
-Забрать результат (после `COMPLETED`).
+Забрать результат (после `completed`).
 
 **Параметры query:** `passthrough=1` — оригинальные внутренние URL без re-host в наш S3.
 
@@ -126,7 +87,7 @@ Late-join — поддерживается. Подключение после te
 
 Можно вызывать **многократно** — payload сохраняется в БД.
 
-**Ошибки:** `404 not_found` (если не `COMPLETED` ещё или request принадлежит другому пользователю).
+**Ошибки:** `404 not_found` (если не `completed` ещё или request принадлежит другому пользователю).
 
 ## `PUT /queue/{modelId}/requests/{requestId}/cancel`
 
@@ -146,9 +107,9 @@ Late-join — поддерживается. Подключение после te
 
 Все ручки `/{requestId}/*` проверяют, что реквест принадлежит вам. Чужие реквесты вернут `404 not_found` — мы намеренно не различаем «нет такого» и «есть, но не ваш», чтобы не дать перебирать ID.
 
-## Streamline для serverless
+## Serverless / edge рантаймы
 
-Если ваш runtime не любит долгие SSE (Cloudflare Workers, Vercel Edge с лимитом 30 сек) — используйте **webhook**:
+Если ваш runtime не может держать долгое polling-соединение — используйте **webhook**:
 
 ```bash
 curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app/cb' \
@@ -159,6 +120,5 @@ curl -X POST 'https://api.neuroartist.ru/queue/flux/dev?webhook=https://your.app
 
 ## Дальше
 
-- [Асинхронная очередь и SSE](/build/async) — copy-paste `fetchEventSource`.
+- [Async + polling](/build/async) — copy-paste polling-loop.
 - [Формат webhooks](/build/webhooks) — server-to-server completion.
-- [Формат SSE-стрима](/build/async) — стадии progress stream.
